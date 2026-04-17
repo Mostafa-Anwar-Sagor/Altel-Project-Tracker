@@ -26,6 +26,7 @@ export default function ProjectDetailPage() {
   const [newComment, setNewComment] = useState('');
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [milestoneForm, setMilestoneForm] = useState({ name: '', description: '', deadline: '' });
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
     if (!id) return;
@@ -43,8 +44,21 @@ export default function ProjectDetailPage() {
       setComments(cRes.data.results || cRes.data);
       setAttachments(aRes.data.results || aRes.data);
       setActivity(Array.isArray(actRes.data) ? actRes.data : (actRes.data as any).results || []);
+      setLastUpdated(new Date());
       setLoading(false);
     }).catch(() => setLoading(false));
+  }, [id]);
+
+  // Poll for project updates every 60 s — keeps health score & progress current
+  useEffect(() => {
+    if (!id) return;
+    const interval = setInterval(() => {
+      projectAPI.get(id).then((r) => {
+        setProject(r.data);
+        setLastUpdated(new Date());
+      }).catch(() => {});
+    }, 60_000);
+    return () => clearInterval(interval);
   }, [id]);
 
   if (loading) return <LoadingSpinner />;
@@ -123,7 +137,12 @@ export default function ProjectDetailPage() {
       <div className="card p-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-slate-500 dark:text-slate-400">Overall Progress</span>
-          <span className="text-sm font-semibold text-slate-800 dark:text-white">{project.progress_percent}%</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400 tabular-nums">
+              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <span className="text-sm font-semibold text-slate-800 dark:text-white">{project.progress_percent}%</span>
+          </div>
         </div>
         <ProgressBar value={project.progress_percent} className="h-3" />
       </div>

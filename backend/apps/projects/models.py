@@ -121,44 +121,40 @@ class Project(models.Model):
     @property
     def health_score(self):
         score = 0
-        # Schedule health (30%)
+
+        # Completion health (50%) — primary driver: directly reflects progress
+        score += self.progress_percent * 0.5
+
+        # Schedule adherence (30%) — compares actual progress to time elapsed
         if self.start_date and self.end_date:
-            total_days = (self.end_date - self.start_date).days or 1
-            elapsed = (timezone.now().date() - self.start_date).days
+            total_days = max(1, (self.end_date - self.start_date).days)
+            elapsed = max(0, (timezone.now().date() - self.start_date).days)
             time_pct = min(100, (elapsed / total_days) * 100)
             schedule_diff = self.progress_percent - time_pct
+            # 50 = on schedule, >50 = ahead, <50 = behind
             schedule_score = max(0, min(100, 50 + schedule_diff))
             score += schedule_score * 0.3
         else:
-            score += 50 * 0.3
+            score += 50 * 0.3  # neutral when no dates set
 
-        # Task health (25%)
+        # Task quality (15%) — task completion rate with overdue penalty
         tasks = self.tasks.all()
         if tasks.exists():
             done = tasks.filter(status='DONE').count()
-            overdue = tasks.filter(due_date__lt=timezone.now().date()).exclude(status__in=['DONE', 'CANCELLED']).count()
+            overdue = tasks.filter(due_date__lt=timezone.now().date()).exclude(
+                status__in=['DONE', 'CANCELLED']
+            ).count()
             task_score = ((done / tasks.count()) * 100) - (overdue * 5)
-            score += max(0, min(100, task_score)) * 0.25
+            score += max(0, min(100, task_score)) * 0.15
         else:
-            score += 50 * 0.25
+            score += 50 * 0.15  # neutral when no tasks
 
-        # Budget health (25%)
-        if self.budget_total > 0:
-            budget_pct = float(self.budget_spent / self.budget_total) * 100
-            progress = self.progress_percent or 1
-            budget_ratio = budget_pct / progress if progress > 0 else budget_pct
-            budget_score = max(0, min(100, 100 - (budget_ratio - 1) * 50)) if budget_ratio > 1 else 100
-            score += budget_score * 0.25
-        else:
-            score += 75 * 0.25
-
-        # Activity health (20%)
+        # Recent activity signal (5%)
         week_ago = timezone.now() - timezone.timedelta(days=7)
         recent_activities = self.activities.filter(created_at__gte=week_ago).count()
-        activity_score = min(100, recent_activities * 15)
-        score += activity_score * 0.20
+        score += min(100, recent_activities * 20) * 0.05
 
-        return round(score)
+        return round(min(100, score))
 
 
 class ProjectMember(models.Model):

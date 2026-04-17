@@ -134,12 +134,51 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, confir
   );
 }
 
-export function HealthScore({ score }: { score: number }) {
-  const color = score >= 80 ? 'text-green-500' : score >= 60 ? 'text-yellow-500' : score >= 40 ? 'text-orange-500' : 'text-red-500';
+export function HealthScore({ score, showLabel = true }: { score: number; showLabel?: boolean }) {
+  const clamped = Math.max(0, Math.min(100, Math.round(score)));
+  const radius = 22;
+  const strokeWidth = 5;
+  const dim = (radius + strokeWidth) * 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - clamped / 100);
+
+  const { stroke, textCls, label } =
+    clamped >= 75
+      ? { stroke: '#22c55e', textCls: 'text-green-500', label: 'Healthy' }
+      : clamped >= 60
+      ? { stroke: '#eab308', textCls: 'text-yellow-500', label: 'Moderate' }
+      : clamped >= 40
+      ? { stroke: '#f97316', textCls: 'text-orange-500', label: 'At Risk' }
+      : { stroke: '#ef4444', textCls: 'text-red-500', label: 'Critical' };
+
   return (
-    <div className="flex items-center gap-2">
-      <span className={cn('text-2xl font-bold', color)}>{Math.round(score)}</span>
-      <span className="text-xs text-slate-400">/100</span>
+    <div className="flex items-center gap-2.5">
+      <div className="relative flex-shrink-0" style={{ width: dim, height: dim }}>
+        <svg width={dim} height={dim} style={{ transform: 'rotate(-90deg)' }}>
+          <circle
+            cx={dim / 2} cy={dim / 2} r={radius}
+            fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth}
+            className="dark:stroke-slate-700"
+          />
+          <circle
+            cx={dim / 2} cy={dim / 2} r={radius}
+            fill="none" stroke={stroke} strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1)' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={cn('text-xs font-bold tabular-nums', textCls)}>{clamped}</span>
+        </div>
+      </div>
+      {showLabel && (
+        <div className="leading-tight">
+          <p className={cn('text-sm font-semibold', textCls)}>{label}</p>
+          <p className="text-xs text-slate-400">{clamped}/100</p>
+        </div>
+      )}
     </div>
   );
 }

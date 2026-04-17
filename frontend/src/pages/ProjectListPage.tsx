@@ -91,6 +91,7 @@ export default function ProjectListPage() {
     ongoing: projects.filter((p) => p.status === 'ONGOING').length,
     on_hold: projects.filter((p) => p.status === 'ON_HOLD').length,
     completed: projects.filter((p) => p.status === 'COMPLETED').length,
+    expired: projects.filter((p) => p.status === 'EXPIRED').length,
   };
 
   return (
@@ -100,7 +101,7 @@ export default function ProjectListPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Projects</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {stats.total} total · {stats.ongoing} ongoing · {stats.completed} completed
+            {stats.total} total · {stats.ongoing} ongoing · {stats.completed} completed{stats.expired > 0 ? ` · ${stats.expired} expired` : ''}
           </p>
         </div>
         <button onClick={() => navigate('/projects/new')} className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm shadow-lg shadow-indigo-500/20">
@@ -109,13 +110,14 @@ export default function ProjectListPage() {
       </div>
 
       {/* Status quick-filter cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { key: '', label: 'All', count: stats.total, color: 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700', active: 'ring-2 ring-indigo-500' },
           { key: 'DRAFT', label: 'Draft', count: stats.draft, color: 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600', active: 'ring-2 ring-slate-500' },
           { key: 'ONGOING', label: 'Ongoing', count: stats.ongoing, color: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800', active: 'ring-2 ring-indigo-500' },
           { key: 'ON_HOLD', label: 'On Hold', count: stats.on_hold, color: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800', active: 'ring-2 ring-amber-500' },
           { key: 'COMPLETED', label: 'Completed', count: stats.completed, color: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800', active: 'ring-2 ring-emerald-500' },
+          { key: 'EXPIRED', label: 'Expired', count: stats.expired, color: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800', active: 'ring-2 ring-red-500' },
         ].map((s) => (
           <button
             key={s.key}
