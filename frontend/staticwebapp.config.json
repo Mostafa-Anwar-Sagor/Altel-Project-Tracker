@@ -1,0 +1,40 @@
+{
+  "routes": [
+    {
+      "route": "/*",
+      "rewrite": "/index.html"
+    }
+  ],
+  "navigationFallback": {
+    "document": "/index.html",
+    "exclude": ["/assets/*", "/*.{css,js,ico,png,svg,woff2}"]
+  },
+  "responseOverrides": {
+    "404": {
+      "document": "/index.html",
+      "statusCode": 200
+    }
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+  }
+}
+
+  "navigationFallback": {
+    "document": "/index.html",
+    "exclude": ["/assets/*", "/*.{css,js,ico,png,svg,woff2}"]
+  },
+  "responseOverrides": {
+    "404": {
+      "document": "/index.html",
+      "statusCode": 200
+    }
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+  }
+}

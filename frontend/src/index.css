@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
+  --accent: #6366f1;
+}
+
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --border: #334155;
+  --accent: #818cf8;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--text-muted);
+  border-radius: 3px;
+}
+
+body {
+  @apply bg-slate-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 antialiased;
+}
+
+.status-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.card {
+  @apply bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200/80 dark:border-slate-700/80 transition-shadow duration-200;
+}
+
+.card:hover {
+  @apply shadow-md;
+}
+
+.btn-primary {
+  @apply bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200;
+}
+
+.input-field {
+  @apply w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 dark:focus:border-indigo-500 outline-none transition-all duration-200 placeholder:text-slate-400;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200;
+}
+
+.sidebar-link.active {
+  @apply bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 shadow-sm;
+}
+
+.sidebar-link:not(.active) {
+  @apply text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:text-gray-700 dark:hover:text-gray-200;
+}
+
+/* React Big Calendar overrides */
+.calendar-container .rbc-calendar {
+  font-family: inherit;
+}
+.calendar-container .rbc-header {
+  @apply py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700;
+}
+.calendar-container .rbc-off-range-bg {
+  @apply bg-slate-50/50 dark:bg-slate-800/50;
+}
+.calendar-container .rbc-today {
+  @apply bg-indigo-50/40 dark:bg-indigo-900/15;
+}
+.calendar-container .rbc-toolbar button {
+  @apply text-sm text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 rounded-lg;
+}
+.calendar-container .rbc-toolbar button.rbc-active {
+  @apply bg-indigo-600 text-white border-indigo-600 shadow-sm;
+}
+.calendar-container .rbc-toolbar button:hover {
+  @apply bg-slate-100 dark:bg-slate-700;
+}
+.calendar-container .rbc-toolbar button.rbc-active:hover {
+  @apply bg-indigo-700;
+}
+.calendar-container .rbc-event {
+  @apply rounded-md shadow-sm;
+}
+.calendar-container .rbc-month-view,
+.calendar-container .rbc-time-view {
+  @apply border-slate-200 dark:border-slate-700;
+}
+.calendar-container .rbc-day-bg + .rbc-day-bg,
+.calendar-container .rbc-month-row + .rbc-month-row {
+  @apply border-slate-200 dark:border-slate-700;
+}
+.calendar-container .rbc-date-cell {
+  @apply text-sm text-slate-600 dark:text-slate-400 py-1;
+}

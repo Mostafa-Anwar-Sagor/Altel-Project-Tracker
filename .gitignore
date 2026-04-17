@@ -1,0 +1,60 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Django ───────────────────────────────────────────────────────────────────
+*.sqlite3
+*.log
+local_settings.py
+/staticfiles/
+/static/
+/media/
+db.sqlite3
+
+# ── Environment & secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.azure.example
+backend/.env
+backend/.env.production
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+frontend/dist/
+frontend/.env
+frontend/.env.production
+!frontend/.env.example
+
+# ── IDE / OS ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Azure deployment artifacts ────────────────────────────────────────────────
+*.zip
+deployment.zip
+
+# ── Cache / temp ─────────────────────────────────────────────────────────────
+.cache/
+*.tmp
+*.bak
