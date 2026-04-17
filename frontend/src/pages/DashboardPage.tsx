@@ -11,7 +11,7 @@ import {
 import {
   FolderKanban, CheckCircle2, Clock, AlertTriangle,
   TrendingUp, ListTodo, ArrowRight,
-  Activity, Zap, FileEdit, PauseCircle,
+  Activity, Zap, FileEdit, PauseCircle, XCircle,
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -46,6 +46,7 @@ export default function DashboardPage() {
     { label: 'Ongoing', value: s.ongoing, icon: TrendingUp, color: 'from-blue-500 to-blue-600', iconBg: 'bg-blue-400/20', status: 'ONGOING' },
     { label: 'On Hold', value: s.on_hold, icon: PauseCircle, color: 'from-amber-500 to-amber-600', iconBg: 'bg-amber-400/20', status: 'ON_HOLD' },
     { label: 'Completed', value: s.completed, icon: CheckCircle2, color: 'from-emerald-500 to-emerald-600', iconBg: 'bg-emerald-400/20', status: 'COMPLETED' },
+    { label: 'Expired', value: s.expired, icon: XCircle, color: 'from-red-500 to-red-600', iconBg: 'bg-red-400/20', status: 'EXPIRED' },
   ];
 
   return (
@@ -62,7 +63,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Summary cards - clickable */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {summaryCards.map((c) => (
           <div
             key={c.label}

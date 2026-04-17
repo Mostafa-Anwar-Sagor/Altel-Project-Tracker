@@ -40,6 +40,8 @@ const STATUS_DOT_COLORS: Record<string, string> = {
 
 export default function ProjectListPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  // allProjects always holds the full unfiltered list — used only for stat card counts
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [search, setSearch] = useState('');
@@ -50,8 +52,13 @@ export default function ProjectListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  const refreshAllProjects = () => {
+    projectAPI.list({}).then((r) => setAllProjects(r.data.results || r.data)).catch(() => {});
+  };
+
   useEffect(() => {
     pillarAPI.list().then((r) => setPillars(r.data)).catch(() => {});
+    refreshAllProjects();
   }, []);
 
   // Read initial status filter from URL query params
@@ -81,17 +88,19 @@ export default function ProjectListPage() {
     projectAPI.delete(deleteId).then(() => {
       toast.success('Project deleted');
       setDeleteId(null);
+      refreshAllProjects();
       fetchProjects();
     }).catch(() => toast.error('Failed to delete'));
   };
 
+  // Stats derived from allProjects — never affected by active filters
   const stats = {
-    total: projects.length,
-    draft: projects.filter((p) => p.status === 'DRAFT').length,
-    ongoing: projects.filter((p) => p.status === 'ONGOING').length,
-    on_hold: projects.filter((p) => p.status === 'ON_HOLD').length,
-    completed: projects.filter((p) => p.status === 'COMPLETED').length,
-    expired: projects.filter((p) => p.status === 'EXPIRED').length,
+    total: allProjects.length,
+    draft: allProjects.filter((p) => p.status === 'DRAFT').length,
+    ongoing: allProjects.filter((p) => p.status === 'ONGOING').length,
+    on_hold: allProjects.filter((p) => p.status === 'ON_HOLD').length,
+    completed: allProjects.filter((p) => p.status === 'COMPLETED').length,
+    expired: allProjects.filter((p) => p.status === 'EXPIRED').length,
   };
 
   return (
