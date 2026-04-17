@@ -18,6 +18,20 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
+# Create default admin if no superuser exists
+echo "Checking for superuser..."
+python manage.py shell -c "
+from django.contrib.auth import get_user_model
+U = get_user_model()
+if not U.objects.filter(is_superuser=True).exists():
+    u = U.objects.create_superuser('admin', 'admin@protracker.local', 'Admin@1234')
+    u.is_approved = True
+    u.save()
+    print('Default admin created: username=admin password=Admin@1234')
+else:
+    print('Superuser already exists, skipping.')
+"
+
 # Start Gunicorn with Uvicorn workers (ASGI - required for Django Channels)
 echo "Starting Gunicorn (ASGI)..."
 exec gunicorn config.asgi:application \
