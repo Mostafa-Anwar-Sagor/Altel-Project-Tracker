@@ -10,15 +10,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Zip backend folder
-        run: cd backend && zip -r ../backend.zip . -x "*.pyc" -x "__pycache__/*"
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy via ZipDeploy (curl)
+      - name: Zip backend folder
+        run: cd backend && zip -r ../backend.zip . -x "*.pyc" -x "__pycache__/*" -x "db.sqlite3"
+
+      - name: Deploy to Azure App Service
         run: |
-          curl -X POST \
-            "https://protracker-altel.scm.azurewebsites.net/api/zipdeploy" \
-            -u "${{ secrets.AZURE_DEPLOY_USER }}:${{ secrets.AZURE_DEPLOY_PASS }}" \
-            --data-binary @backend.zip \
-            --max-time 300 \
-            -w "\nHTTP Status: %{http_code}\n" \
-            -f
+          az webapp deploy \
+            --resource-group rg-protracker \
+            --name protracker-altel \
+            --src-path backend.zip \
+            --type zip \
+            --timeout 300
