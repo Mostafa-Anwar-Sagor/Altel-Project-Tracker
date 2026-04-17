@@ -25,4 +25,4 @@ jobs:
             --name protracker-altel \
             --src-path backend.zip \
             --type zip \
-            --timeout 300
+            --async true

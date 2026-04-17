@@ -4,6 +4,12 @@ set -e
 
 echo "=== ProTracker Backend Startup ==="
 
+# Activate Oryx-built virtual environment if present
+if [ -d "/antenv" ]; then
+    echo "Activating /antenv virtual environment..."
+    source /antenv/bin/activate
+fi
+
 # Run migrations
 echo "Running database migrations..."
 python manage.py migrate --noinput

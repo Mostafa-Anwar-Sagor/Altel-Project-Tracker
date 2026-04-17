@@ -6,7 +6,7 @@
     }
   ],
   "navigationFallback": {
-    "document": "/index.html",
+    "rewrite": "/index.html",
     "exclude": ["/assets/*", "/*.{css,js,ico,png,svg,woff2}"]
   },
   "responseOverrides": {
