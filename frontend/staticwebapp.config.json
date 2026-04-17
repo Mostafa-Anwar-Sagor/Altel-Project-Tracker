@@ -1,17 +1,11 @@
 {
-  "routes": [
-    {
-      "route": "/*",
-      "rewrite": "/index.html"
-    }
-  ],
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": ["/assets/*", "/*.{css,js,ico,png,svg,woff2}"]
   },
   "responseOverrides": {
     "404": {
-      "document": "/index.html",
+      "rewrite": "/index.html",
       "statusCode": 200
     }
   },
