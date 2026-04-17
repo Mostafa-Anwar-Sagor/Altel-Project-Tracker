@@ -18,18 +18,22 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Create default admin if no superuser exists
-echo "Checking for superuser..."
+# Load initial data from fixture if DB is not yet populated with real users
+echo "Checking if initial data fixture should be loaded..."
 python manage.py shell -c "
 from django.contrib.auth import get_user_model
 U = get_user_model()
-if not U.objects.filter(is_superuser=True).exists():
-    u = U.objects.create_superuser('admin', 'admin@protracker.local', 'Admin@1234')
-    u.is_approved = True
-    u.save()
-    print('Default admin created: username=admin password=Admin@1234')
+admin = U.objects.filter(username='admin').first()
+# Load fixture if: no users at all, OR only the temp admin (role=ACCOUNT_MANAGER) exists
+should_load = (not admin) or (admin.role == 'ACCOUNT_MANAGER')
+if should_load:
+    print('Loading initial data from fixture...')
+    U.objects.all().delete()
+    from django.core.management import call_command
+    call_command('loaddata', 'fixtures/initial_data.json')
+    print('Fixture loaded successfully! All local users and data are now available.')
 else:
-    print('Superuser already exists, skipping.')
+    print('Data already loaded (admin role=' + admin.role + '), skipping fixture.')
 "
 
 # Start Gunicorn with Uvicorn workers (ASGI - required for Django Channels)
