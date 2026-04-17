@@ -4,7 +4,6 @@ import type {
   DashboardData, CalendarEvent, Tag, ProjectCategory, PaginatedResponse,
   UserMinimal, User, TimeLog, ActivityLog, Pillar, RoleType,
   EmailConfig, EmailLog, ProjectExpiryReminder, UserEmail,
-  TelegramConfig, TelegramLog,
 } from '@/types';
 
 // Auth
@@ -25,6 +24,7 @@ export const authAPI = {
   createRole: (data: { slug: string; name: string; access_level: string; description?: string }) =>
     api.post<RoleType>('/auth/roles/', data),
   deleteRole: (id: number) => api.delete(`/auth/roles/${id}/`),
+  changeRole: (id: string, role: string) => api.post<User>(`/auth/users/${id}/change-role/`, { role }),
 };
 
 // Projects
@@ -164,14 +164,4 @@ export const emailAPI = {
   getExpiryReminders: (params?: Record<string, string>) =>
     api.get<ProjectExpiryReminder[]>('/expiry-reminders/', { params }),
   getUsersEmails: () => api.get<UserEmail[]>('/users-emails/'),
-};
-
-// Telegram System
-export const telegramAPI = {
-  getConfig: () => api.get<TelegramConfig>('/telegram-config/'),
-  updateConfig: (data: { bot_token?: string; is_active?: boolean }) =>
-    api.put<TelegramConfig>('/telegram-config/', data),
-  testTelegram: (chat_id: string) => api.post('/test-telegram/', { chat_id }),
-  setWebhook: (webhook_url: string) => api.post('/set-webhook/', { webhook_url }),
-  getLogs: () => api.get<TelegramLog[]>('/telegram-logs/'),
 };

@@ -30,7 +30,7 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
             'role', 'role_display', 'access_level', 'pillar', 'is_approved',
             'avatar', 'phone', 'timezone', 'department',
-            'notification_email', 'notification_inapp', 'telegram_chat_id',
+            'notification_email', 'notification_inapp',
             'date_joined', 'profile'
         ]
         read_only_fields = ['id', 'date_joined']

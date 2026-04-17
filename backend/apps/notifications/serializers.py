@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Notification, Reminder, EmailLog, EmailConfig, ProjectExpiryReminder, TelegramConfig, TelegramLog
+from .models import Notification, Reminder, EmailLog, EmailConfig, ProjectExpiryReminder
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -66,35 +66,3 @@ class ProjectExpiryReminderSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectExpiryReminder
         fields = ['id', 'project', 'project_title', 'stage', 'sent_at', 'recipients_json']
-
-
-class TelegramConfigSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TelegramConfig
-        fields = ['bot_token', 'bot_username', 'is_active', 'updated_at']
-        read_only_fields = ['updated_at']
-        extra_kwargs = {
-            'bot_token': {'write_only': True},
-        }
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['bot_token_set'] = bool(instance.bot_token)
-        return data
-
-
-class TelegramLogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TelegramLog
-        fields = [
-            'id', 'recipient_chat_id', 'recipient_name', 'message',
-            'status', 'message_id', 'error_message', 'sent_at', 'created_at',
-        ]
-
-
-class TestTelegramSerializer(serializers.Serializer):
-    chat_id = serializers.CharField(max_length=50, help_text='Telegram chat_id to send test to')
-
-
-class SetWebhookSerializer(serializers.Serializer):
-    webhook_url = serializers.URLField(help_text='Public HTTPS URL for the Telegram webhook')

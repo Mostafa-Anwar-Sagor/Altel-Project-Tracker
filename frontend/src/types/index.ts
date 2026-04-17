@@ -16,7 +16,6 @@ export interface User {
   department: string;
   notification_email: boolean;
   notification_inapp: boolean;
-  telegram_chat_id: string;
   date_joined: string;
   profile?: UserProfile;
 }
@@ -323,25 +322,6 @@ export interface ProjectExpiryReminder {
   stage: number;
   sent_at: string;
   recipients_json: string;
-  created_at: string;
-}
-
-export interface TelegramConfig {
-  bot_token_set: boolean;
-  bot_username: string;
-  is_active: boolean;
-  updated_at: string;
-}
-
-export interface TelegramLog {
-  id: number;
-  recipient_chat_id: string;
-  recipient_name: string;
-  message: string;
-  status: 'SENT' | 'FAILED';
-  message_id: string;
-  error_message: string;
-  sent_at: string | null;
   created_at: string;
 }
 

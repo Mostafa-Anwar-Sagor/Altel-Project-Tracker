@@ -34,8 +34,6 @@ class User(AbstractUser):
     department = models.CharField(max_length=100, blank=True)
     notification_email = models.BooleanField(default=True)
     notification_inapp = models.BooleanField(default=True)
-    telegram_chat_id = models.CharField(max_length=50, blank=True, default='',
-        help_text='Telegram chat ID – set automatically when user sends /link to the bot')
 
     class Meta:
         ordering = ['-date_joined']

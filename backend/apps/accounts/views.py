@@ -149,3 +149,15 @@ class UserViewSet(viewsets.ModelViewSet):
         user.set_password(new_password)
         user.save()
         return Response({'status': 'password reset'})
+
+    @action(detail=True, methods=['post'], url_path='change-role')
+    def change_role(self, request, pk=None):
+        user = self.get_object()
+        role_slug = request.data.get('role', '').strip()
+        if not role_slug:
+            return Response({'error': 'role is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not Role.objects.filter(slug=role_slug).exists():
+            return Response({'error': f'Role "{role_slug}" does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+        user.role = role_slug
+        user.save()
+        return Response(UserSerializer(user).data)
