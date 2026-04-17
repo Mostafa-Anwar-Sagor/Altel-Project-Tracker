@@ -10,6 +10,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build frontend
+        run: npm ci && npm run build
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ''
+
+      - name: Copy frontend build into backend
+        run: cp -r frontend/dist backend/frontend_build
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
