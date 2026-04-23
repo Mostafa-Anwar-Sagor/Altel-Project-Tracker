@@ -7,8 +7,9 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 import {
-  Download, TrendingUp, DollarSign, Users, Clock,
+  TrendingUp, DollarSign, Users, Clock,
   FolderKanban, AlertTriangle, CheckCircle2, Activity,
+  FileText, FileSpreadsheet, Settings2, X, ChevronDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -20,10 +21,136 @@ const STATUS_COLORS: Record<string, string> = {
   on_hold: '#eab308', completed: '#22c55e', cancelled: '#64748b', expired: '#ef4444',
 };
 
+type ExportFilters = {
+  status: string;
+  pillar: string;
+  date_from: string;
+  date_to: string;
+  columns: string[];
+};
+
+const OVERVIEW_COLUMNS = [
+  { key: 'title', label: 'Project Title' },
+  { key: 'status', label: 'Status' },
+  { key: 'priority', label: 'Priority' },
+  { key: 'start_date', label: 'Start Date' },
+  { key: 'end_date', label: 'End Date' },
+  { key: 'progress', label: 'Progress' },
+  { key: 'budget', label: 'Budget (RM)' },
+  { key: 'spent', label: 'Spent (RM)' },
+  { key: 'health', label: 'Health Score' },
+];
+
+function CustomReportPanel({
+  tab, filters, setFilters, onClose,
+}: {
+  tab: ReportTab;
+  filters: ExportFilters;
+  setFilters: (f: ExportFilters) => void;
+  onClose: () => void;
+}) {
+  const toggleColumn = (key: string) => {
+    const cols = filters.columns.includes(key)
+      ? filters.columns.filter((c) => c !== key)
+      : [...filters.columns, key];
+    setFilters({ ...filters, columns: cols });
+  };
+
+  return (
+    <div className="card p-6 border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/10">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <Settings2 className="h-5 w-5 text-indigo-600" />
+          <h3 className="text-base font-semibold text-slate-800 dark:text-white">Custom Report Options</h3>
+        </div>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Filter by Status</label>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Statuses</option>
+            <option value="DRAFT">Draft</option>
+            <option value="ONGOING">Ongoing</option>
+            <option value="ON_HOLD">On Hold</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="EXPIRED">Expired</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Filter by Pillar / Category</label>
+          <input
+            type="text"
+            placeholder="e.g. ICT, Infrastructure"
+            value={filters.pillar}
+            onChange={(e) => setFilters({ ...filters, pillar: e.target.value })}
+            className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Start Date From</label>
+          <input
+            type="date"
+            value={filters.date_from}
+            onChange={(e) => setFilters({ ...filters, date_from: e.target.value })}
+            className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">End Date To</label>
+          <input
+            type="date"
+            value={filters.date_to}
+            onChange={(e) => setFilters({ ...filters, date_to: e.target.value })}
+            className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+      {tab === 'overview' && (
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
+            Columns to Include in Export
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {OVERVIEW_COLUMNS.map((col) => (
+              <button
+                key={col.key}
+                onClick={() => toggleColumn(col.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                  filters.columns.includes(col.key)
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                }`}
+              >
+                {col.label}
+              </button>
+            ))}
+          </div>
+          {filters.columns.length === 0 && (
+            <p className="text-xs text-amber-600 mt-2">Select at least one column, or all columns will be exported.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ReportsPage() {
   const [tab, setTab] = useState<ReportTab>('overview');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showCustom, setShowCustom] = useState(false);
+  const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
+  const [filters, setFilters] = useState<ExportFilters>({
+    status: '', pillar: '', date_from: '', date_to: '',
+    columns: OVERVIEW_COLUMNS.map((c) => c.key),
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -38,21 +165,27 @@ export default function ReportsPage() {
     fetcher().then((r) => { setData(r.data); setLoading(false); }).catch(() => setLoading(false));
   }, [tab]);
 
-  const handleExport = () => {
-    reportAPI.export({ format: 'excel', report_type: tab }).then((r) => {
-      const url = window.URL.createObjectURL(new Blob([r.data]));
+  const handleExport = (format: 'excel' | 'pdf') => {
+    setExporting(format);
+    const payload: Record<string, unknown> = { format, report_type: tab, ...filters };
+    reportAPI.export(payload as any).then((r) => {
+      const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+      const mime = format === 'pdf'
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const url = window.URL.createObjectURL(new Blob([r.data], { type: mime }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `report_${tab}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.download = `altel_${tab}_report_${new Date().toISOString().slice(0, 10)}.${ext}`;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Report exported');
-    }).catch(() => toast.error('Export failed'));
+      toast.success(`${format.toUpperCase()} report downloaded`);
+    }).catch(() => toast.error('Export failed')).finally(() => setExporting(null));
   };
 
   const tabs: { key: ReportTab; label: string; icon: typeof TrendingUp }[] = [
     { key: 'overview', label: 'Overview', icon: TrendingUp },
-    { key: 'budget', label: 'Budget', icon: DollarSign },
+    { key: 'budget', label: 'Budget (RM)', icon: DollarSign },
     { key: 'time', label: 'Time Tracking', icon: Clock },
     { key: 'team', label: 'Team', icon: Users },
     { key: 'workload', label: 'Workload', icon: Activity },
@@ -60,16 +193,57 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Reports</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Insights and analytics for your projects</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Reports & Analytics</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Generate and export project insights — values in Malaysian Ringgit (RM)
+          </p>
         </div>
-        <button onClick={handleExport} className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow">
-          <Download className="h-4 w-4" /> Export Excel
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowCustom((v) => !v)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+              showCustom
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-600 dark:text-indigo-300'
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-300'
+            }`}
+          >
+            <Settings2 className="h-4 w-4" />
+            Custom Report
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showCustom ? 'rotate-180' : ''}`} />
+          </button>
+          <button
+            onClick={() => handleExport('excel')}
+            disabled={exporting !== null}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 shadow-sm hover:shadow transition-all"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            {exporting === 'excel' ? 'Exporting…' : 'Export Excel'}
+          </button>
+          <button
+            onClick={() => handleExport('pdf')}
+            disabled={exporting !== null}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-60 shadow-sm hover:shadow transition-all"
+          >
+            <FileText className="h-4 w-4" />
+            {exporting === 'pdf' ? 'Generating PDF…' : 'Export PDF'}
+          </button>
+        </div>
       </div>
 
+      {/* Custom Report Panel */}
+      {showCustom && (
+        <CustomReportPanel
+          tab={tab}
+          filters={filters}
+          setFilters={setFilters}
+          onClose={() => setShowCustom(false)}
+        />
+      )}
+
+      {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {tabs.map((t) => (
           <button
@@ -180,9 +354,9 @@ function BudgetTab({ data }: { data: any }) {
   const projects = data.projects || [];
   const totals = data.totals || {};
   const cards = [
-    { label: 'Total Budget', value: totals.total_budget || 0, bg: 'bg-indigo-50 dark:bg-indigo-900/30', fg: 'text-indigo-600 dark:text-indigo-400', icon: DollarSign },
-    { label: 'Total Spent', value: totals.total_spent || 0, bg: 'bg-rose-50 dark:bg-rose-900/30', fg: 'text-rose-600 dark:text-rose-400', icon: TrendingUp },
-    { label: 'Remaining', value: totals.total_remaining || 0, bg: 'bg-emerald-50 dark:bg-emerald-900/30', fg: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle2 },
+    { label: 'Total Budget', sublabel: 'Value (RM)', value: totals.total_budget || 0, bg: 'bg-indigo-50 dark:bg-indigo-900/30', fg: 'text-indigo-600 dark:text-indigo-400', icon: DollarSign },
+    { label: 'Total Spent', sublabel: 'Value (RM)', value: totals.total_spent || 0, bg: 'bg-rose-50 dark:bg-rose-900/30', fg: 'text-rose-600 dark:text-rose-400', icon: TrendingUp },
+    { label: 'Remaining', sublabel: 'Value (RM)', value: totals.total_remaining || 0, bg: 'bg-emerald-50 dark:bg-emerald-900/30', fg: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle2 },
   ];
 
   return (
@@ -191,35 +365,39 @@ function BudgetTab({ data }: { data: any }) {
         {cards.map((c) => (
           <div key={c.label} className="card p-5 hover:shadow-md transition-shadow">
             <div className={`p-2.5 rounded-xl inline-flex ${c.bg} ${c.fg} mb-3`}><c.icon className="h-5 w-5" /></div>
-            <p className="text-2xl font-bold text-slate-800 dark:text-white">{formatCurrency(c.value)}</p>
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{c.sublabel}</p>
+            <p className="text-xl font-bold text-slate-800 dark:text-white">{formatCurrency(c.value)}</p>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{c.label}</p>
           </div>
         ))}
       </div>
       <div className="card p-6">
-        <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-4">Budget vs Spent</h3>
+        <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-1">Budget vs Spent (RM)</h3>
+        <p className="text-xs text-slate-400 mb-4">All values in Ringgit Malaysia</p>
         <ResponsiveContainer width="100%" height={350}>
           <BarChart data={projects.map((p: any) => ({ name: p.title?.length > 18 ? p.title.slice(0, 18) + '…' : p.title, budget: p.budget_total, spent: p.budget_spent }))}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
             <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+            <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `RM ${(v / 1000).toFixed(0)}k`} />
             <Tooltip formatter={(v: number) => formatCurrency(v)} />
-            <Bar dataKey="budget" fill="#6366f1" name="Budget" radius={[6, 6, 0, 0]} />
-            <Bar dataKey="spent" fill="#f43f5e" name="Spent" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="budget" fill="#6366f1" name="Budget (RM)" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="spent" fill="#f43f5e" name="Spent (RM)" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
       <div className="card overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <h3 className="text-base font-semibold text-slate-800 dark:text-white">Project Budget Details</h3>
+          <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-full">All values in Ringgit Malaysia (RM)</span>
         </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
               <th className="px-6 py-3 text-left font-medium">Project</th>
-              <th className="px-6 py-3 text-right font-medium">Budget</th>
-              <th className="px-6 py-3 text-right font-medium">Spent</th>
-              <th className="px-6 py-3 text-right font-medium">Remaining</th>
+              <th className="px-6 py-3 text-left font-medium">Status</th>
+              <th className="px-6 py-3 text-right font-medium">Budget (RM)</th>
+              <th className="px-6 py-3 text-right font-medium">Spent (RM)</th>
+              <th className="px-6 py-3 text-right font-medium">Remaining (RM)</th>
               <th className="px-6 py-3 text-right font-medium">Usage</th>
             </tr>
           </thead>
@@ -227,9 +405,14 @@ function BudgetTab({ data }: { data: any }) {
             {projects.map((p: any) => (
               <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                 <td className="px-6 py-3 font-medium text-slate-800 dark:text-white">{p.title}</td>
-                <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300">{formatCurrency(p.budget_total)}</td>
-                <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300">{formatCurrency(p.budget_spent)}</td>
-                <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300">{formatCurrency(p.budget_remaining)}</td>
+                <td className="px-6 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 uppercase tracking-wide">{p.status}</span>
+                </td>
+                <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300 font-mono text-xs">{formatCurrency(p.budget_total)}</td>
+                <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300 font-mono text-xs">{formatCurrency(p.budget_spent)}</td>
+                <td className={`px-6 py-3 text-right font-mono text-xs font-semibold ${p.is_over_budget ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  {formatCurrency(p.budget_remaining)}
+                </td>
                 <td className="px-6 py-3">
                   <div className="flex items-center justify-end gap-2">
                     <div className="w-20 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
@@ -241,6 +424,17 @@ function BudgetTab({ data }: { data: any }) {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="bg-indigo-50 dark:bg-indigo-900/20 border-t-2 border-indigo-200 dark:border-indigo-700">
+              <td className="px-6 py-3 font-bold text-slate-800 dark:text-white" colSpan={2}>Total</td>
+              <td className="px-6 py-3 text-right font-bold text-slate-800 dark:text-white font-mono text-xs">{formatCurrency(totals.total_budget || 0)}</td>
+              <td className="px-6 py-3 text-right font-bold text-slate-800 dark:text-white font-mono text-xs">{formatCurrency(totals.total_spent || 0)}</td>
+              <td className="px-6 py-3 text-right font-bold text-emerald-700 dark:text-emerald-400 font-mono text-xs">{formatCurrency(totals.total_remaining || 0)}</td>
+              <td className="px-6 py-3 text-right text-xs font-semibold text-slate-500">
+                {totals.total_budget > 0 ? `${((totals.total_spent / totals.total_budget) * 100).toFixed(1)}%` : '—'}
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
