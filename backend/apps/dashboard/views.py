@@ -65,11 +65,37 @@ class DashboardView(APIView):
             assigned_to=request.user, due_date=today
         ).exclude(status__in=['DONE', 'CANCELLED'])
 
-        # Budget overview
+        # TCV overview
         budget_data = projects.exclude(status='CANCELLED').aggregate(
-            total_budget=Sum('budget_total'),
-            total_spent=Sum('budget_spent'),
+            total_tcv=Sum('tcv'),
         )
+        projects_with_tcv = projects.exclude(status='CANCELLED').filter(tcv__isnull=False).count()
+
+        # TCV by year — multi-year bar chart (all years with data + current year always)
+        from decimal import Decimal
+        from django.db.models.functions import ExtractYear
+
+        year_agg = (
+            projects.filter(tcv__isnull=False, start_date__isnull=False)
+            .annotate(yr=ExtractYear('start_date'))
+            .values('yr')
+            .annotate(total=Sum('tcv'))
+            .order_by('yr')
+        )
+        years_with_data = {int(row['yr']): float(row['total'] or 0) for row in year_agg}
+        # Always include last 5 years for context
+        current_year = today.year
+        year_range = range(max(current_year - 4, min(years_with_data.keys(), default=current_year)), current_year + 1)
+        tcv_by_year = [{'year': str(y), 'tcv': years_with_data.get(y, 0)} for y in year_range]
+
+        # TCV by pillar for dashboard
+        from django.db.models import Sum as DSum
+        tcv_by_pillar = []
+        pillar_agg = projects.exclude(status='CANCELLED').filter(
+            tcv__isnull=False, pillar__isnull=False
+        ).values('pillar').annotate(total=DSum('tcv')).order_by('-total')
+        for row in pillar_agg:
+            tcv_by_pillar.append({'pillar': row['pillar'], 'tcv': float(row['total'] or 0)})
 
         # Status distribution for chart
         status_chart = []
@@ -169,13 +195,17 @@ class DashboardView(APIView):
                 for t in my_tasks_today
             ],
             'budget': {
-                'total': float(budget_data['total_budget'] or 0),
-                'spent': float(budget_data['total_spent'] or 0),
+                'total': float(budget_data['total_tcv'] or 0),
+                'spent': 0,
+                'projects_with_tcv': projects_with_tcv,
+                'total_projects': projects.count(),
             },
             'charts': {
                 'status_distribution': status_chart,
                 'priority_distribution': priority_chart,
                 'monthly_completed': monthly_completed,
+                'tcv_by_year': tcv_by_year,
+                'tcv_by_pillar': tcv_by_pillar,
             },
             'top_projects': ProjectListSerializer(top_projects, many=True).data,
             'recent_activity': ActivityLogSerializer(recent_activity, many=True).data,

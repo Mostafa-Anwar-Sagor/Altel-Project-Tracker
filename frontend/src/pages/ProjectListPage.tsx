@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { projectAPI, pillarAPI } from '@/api/endpoints';
 import { Project, Pillar } from '@/types';
+import { useAuthStore } from '@/stores/authStore';
 import { StatusBadge, ProgressBar, LoadingSpinner, EmptyState, ConfirmDialog } from '@/components/ui';
 import { cn } from '@/utils/helpers';
 import {
@@ -39,6 +40,9 @@ const STATUS_DOT_COLORS: Record<string, string> = {
 };
 
 export default function ProjectListPage() {
+  const { user } = useAuthStore();
+  // Always show TCV column — backend sets tcv_display=null for projects the user can't see TCV for
+  const canSeeTCV = true;
   const [projects, setProjects] = useState<Project[]>([]);
   // allProjects always holds the full unfiltered list — used only for stat card counts
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -193,7 +197,7 @@ export default function ProjectListPage() {
           }
         />
       ) : view === 'table' ? (
-        <SpreadsheetView projects={projects} onDelete={setDeleteId} navigate={navigate} />
+        <SpreadsheetView projects={projects} onDelete={setDeleteId} navigate={navigate} canSeeTCV={canSeeTCV} />
       ) : (
         <KanbanView projects={projects} navigate={navigate} />
       )}
@@ -210,8 +214,8 @@ export default function ProjectListPage() {
   );
 }
 
-function SpreadsheetView({ projects, onDelete, navigate }: {
-  projects: Project[]; onDelete: (id: string) => void; navigate: any;
+function SpreadsheetView({ projects, onDelete, navigate, canSeeTCV }: {
+  projects: Project[]; onDelete: (id: string) => void; navigate: any; canSeeTCV: boolean;
 }) {
   // Collect all unique custom field keys across all projects
   const customFieldKeys = Array.from(
@@ -227,16 +231,17 @@ function SpreadsheetView({ projects, onDelete, navigate }: {
               <th className="px-4 py-3.5 font-semibold text-center w-12">No.</th>
               <th className="px-4 py-3.5 font-semibold">Pillar</th>
               <th className="px-4 py-3.5 font-semibold">Client Name</th>
-              <th className="px-4 py-3.5 font-semibold">Contact Person</th>
-              <th className="px-4 py-3.5 font-semibold">Tel.</th>
+              <th className="px-4 py-3.5 font-semibold">Project Manager</th>
+              {canSeeTCV && <th className="px-4 py-3.5 font-semibold text-right">TCV (RM)</th>}
               <th className="px-4 py-3.5 font-semibold">Project Name</th>
               <th className="px-4 py-3.5 font-semibold">Scope of Works</th>
               <th className="px-4 py-3.5 font-semibold">Status</th>
-              <th className="px-4 py-3.5 font-semibold">Year</th>
+              <th className="px-4 py-3.5 font-semibold">Timeline</th>
               <th className="px-4 py-3.5 font-semibold text-center">Completed (%)</th>
               {customFieldKeys.map((key) => (
                 <th key={key} className="px-4 py-3.5 font-semibold">{key}</th>
               ))}
+              <th className="px-4 py-3.5 font-semibold whitespace-nowrap">Created</th>
               <th className="px-4 py-3.5 font-semibold w-20 text-center">Actions</th>
             </tr>
           </thead>
@@ -258,8 +263,12 @@ function SpreadsheetView({ projects, onDelete, navigate }: {
                   )}
                 </td>
                 <td className="px-4 py-3 font-medium text-slate-800 dark:text-white">{p.client_name || '—'}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.contact_person || '—'}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">{p.contact_tel || '—'}</td>
+                <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.project_manager || '—'}</td>
+                {canSeeTCV && (
+                  <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300 whitespace-nowrap font-medium">
+                    {p.tcv_display != null ? `RM ${Number(p.tcv_display).toLocaleString('en-MY', { minimumFractionDigits: 2 })}` : '—'}
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <p className="font-medium text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{p.title}</p>
                 </td>
@@ -287,6 +296,9 @@ function SpreadsheetView({ projects, onDelete, navigate }: {
                     {p.custom_fields?.[key] || '—'}
                   </td>
                 ))}
+                <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
+                  {p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+                </td>
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1 justify-center">
                     <button

@@ -16,8 +16,30 @@ from .serializers import ProjectSnapshotSerializer
 
 class OverviewReport(APIView):
     def get(self, request):
-        projects = Project.objects.all()
+        from django.db.models import Avg, Count
+        from django.db.models.functions import TruncMonth
+        from datetime import date as _date
+
+        user = request.user
+        access_level = getattr(user, 'access_level', 'OWN_ONLY')
         today = timezone.now().date()
+
+        # ── Role-based project scope ──────────────────────────────────────
+        if getattr(user, 'is_superuser', False) or access_level in ('ADMIN', 'FULL_ACCESS'):
+            projects = Project.objects.all()
+            scope_label = 'all'
+        elif access_level == 'PILLAR_BASED':
+            projects = (
+                Project.objects.filter(pillar=user.pillar) if user.pillar
+                else Project.objects.none()
+            )
+            scope_label = 'pillar'
+        else:  # OWN_ONLY (Account Manager)
+            projects = Project.objects.filter(
+                Q(owner=user) | Q(created_by=user) | Q(manager=user)
+                | Q(members__user=user)
+            ).distinct()
+            scope_label = 'own'
 
         status_counts = {}
         for s in Project.Status.choices:
@@ -27,13 +49,64 @@ class OverviewReport(APIView):
         for p in Project.Priority.choices:
             priority_counts[p[0].lower()] = projects.filter(priority=p[0]).count()
 
+        active = projects.exclude(status__in=['CANCELLED'])
+        completed_count = status_counts.get('completed', 0)
+        active_count = active.count()
+        completion_rate = round((completed_count / active_count * 100), 1) if active_count > 0 else 0
+
+        avg_progress = active.aggregate(avg=Avg('progress_percent'))['avg'] or 0
+
+        # By pillar breakdown
+        pillar_data = (
+            projects.exclude(status='CANCELLED').filter(pillar__isnull=False).exclude(pillar='')
+            .values('pillar')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        by_pillar = [{'pillar': r['pillar'], 'count': r['count']} for r in pillar_data]
+
+        # Project intake trend: full 12-month rolling window (fill zeros)
+        twelve_months_ago = today.replace(day=1)
+        # Build ordered list of the last 12 months
+        months_series = []
+        y, m = today.year, today.month
+        for _ in range(12):
+            months_series.append((y, m))
+            m -= 1
+            if m == 0:
+                m = 12
+                y -= 1
+        months_series.reverse()  # oldest → newest
+
+        created_trend = (
+            projects.filter(created_at__date__gte=_date(months_series[0][0], months_series[0][1], 1))
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(count=Count('id'))
+        )
+        trend_map = {(r['month'].year, r['month'].month): r['count'] for r in created_trend}
+
+        import calendar
+        by_month = [
+            {
+                'month': f"{calendar.month_abbr[mo]} {yr}",
+                'count': trend_map.get((yr, mo), 0),
+            }
+            for yr, mo in months_series
+        ]
+
         return Response({
             'total': projects.count(),
             'by_status': status_counts,
             'by_priority': priority_counts,
             'overdue': projects.filter(
                 end_date__lt=today
-            ).exclude(status__in=['COMPLETED', 'CANCELLED', 'EXPIRED']).count(),
+            ).exclude(status__in=['COMPLETED', 'CANCELLED']).count(),
+            'avg_progress': round(float(avg_progress), 1),
+            'completion_rate': completion_rate,
+            'by_pillar': by_pillar,
+            'by_month_created': by_month,
+            'scope': scope_label,
         })
 
 
@@ -51,31 +124,89 @@ class ProgressTrendReport(APIView):
 
 
 class BudgetReport(APIView):
+    """TCV (Total Contract Value) Report — role/pillar-based access."""
     def get(self, request):
-        projects = Project.objects.exclude(status__in=['CANCELLED']).values(
-            'id', 'title', 'budget_total', 'budget_spent', 'progress_percent', 'status'
-        )
+        user = request.user
+        access_level = getattr(user, 'access_level', 'OWN_ONLY')
+
+        projects = Project.objects.exclude(status='CANCELLED')
+
+        # Role-based queryset filtering
+        if not (getattr(user, 'is_superuser', False) or access_level in ('ADMIN', 'FULL_ACCESS')):
+            if access_level == 'PILLAR_BASED':
+                projects = projects.filter(pillar=user.pillar)
+            else:
+                projects = projects.filter(
+                    Q(owner=user) | Q(created_by=user) | Q(manager=user)
+                    | Q(members__user=user)
+                ).distinct()
+
+        all_projects = list(projects.values(
+            'id', 'title', 'status', 'progress_percent', 'start_date', 'end_date', 'pillar', 'tcv'
+        ))
+        has_tcv = [p for p in all_projects if p['tcv'] is not None]
 
         data = []
-        for p in projects:
-            total = float(p['budget_total'] or 0)
-            spent = float(p['budget_spent'] or 0)
+        for p in has_tcv:
+            tcv_val = float(p['tcv'])
+            start = p['start_date']
             data.append({
                 **p,
-                'budget_total': total,
-                'budget_spent': spent,
-                'budget_remaining': total - spent,
-                'budget_usage_pct': round((spent / total * 100), 1) if total > 0 else 0,
-                'is_over_budget': spent > total,
+                'tcv': tcv_val,
+                'year': start.year if start else None,
+                'month': start.month if start else None,
             })
+
+        total_tcv = sum(d['tcv'] for d in data)
+
+        # By year
+        by_year: dict = {}
+        for d in data:
+            y = d.get('year') or 'Unknown'
+            by_year[y] = by_year.get(y, 0) + d['tcv']
+        by_year_list = sorted(
+            [{'year': str(k), 'tcv': round(v, 2)} for k, v in by_year.items()],
+            key=lambda x: x['year']
+        )
+
+        # By month (selected year or current year)
+        from datetime import date as _date
+        current_year = _date.today().year
+        year_param = request.query_params.get('year')
+        selected_year = int(year_param) if year_param and year_param.isdigit() else current_year
+        month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        by_month: dict = {i: 0.0 for i in range(1, 13)}
+        for d in data:
+            if d.get('year') == selected_year and d.get('month'):
+                by_month[d['month']] = by_month.get(d['month'], 0) + d['tcv']
+        by_month_list = [
+            {'month': month_names[m - 1], 'tcv': round(v, 2), 'year': selected_year}
+            for m, v in by_month.items()
+        ]
+
+        # By pillar
+        by_pillar: dict = {}
+        for d in data:
+            pl = d.get('pillar') or 'Unassigned'
+            by_pillar[pl] = by_pillar.get(pl, 0) + d['tcv']
+        by_pillar_list = sorted(
+            [{'pillar': k, 'tcv': round(v, 2)} for k, v in by_pillar.items()],
+            key=lambda x: -x['tcv']
+        )
 
         return Response({
             'projects': data,
             'totals': {
-                'total_budget': sum(d['budget_total'] for d in data),
-                'total_spent': sum(d['budget_spent'] for d in data),
-                'total_remaining': sum(d['budget_remaining'] for d in data),
-            }
+                'total_tcv': round(total_tcv, 2),
+                'projects_with_tcv': len(data),
+                'projects_total': len(all_projects),
+            },
+            'by_year': by_year_list,
+            'by_month': by_month_list,
+            'by_pillar': by_pillar_list,
+            'selected_year': selected_year,
+            'available_years': [str(r['year']) for r in by_year_list],
         })
 
 
@@ -272,59 +403,49 @@ class ExportReport(APIView):
         generated_at = tz.now().strftime('%d %B %Y, %I:%M %p')
 
         if report_type == 'budget':
-            ws.title = 'Budget Report'
-            ws.merge_cells('A1:H1')
-            ws['A1'] = 'ALTEL PROJECT TRACKER — Budget Report (RM)'
+            ws.title = 'TCV Report'
+            ws.merge_cells('A1:G1')
+            ws['A1'] = 'ALTEL PROJECT TRACKER — Total Contract Value (TCV) Report (RM)'
             ws['A1'].font = title_font
             ws['A1'].alignment = center
-            ws.merge_cells('A2:H2')
+            ws.merge_cells('A2:G2')
             ws['A2'] = f'Generated: {generated_at}'
             ws['A2'].font = Font(italic=True, color='64748B', size=9)
             ws['A2'].alignment = center
             ws.row_dimensions[1].height = 28
             ws.row_dimensions[2].height = 16
 
-            headers = ['#', 'Project Title', 'Status', 'Progress (%)', 'Budget (RM)', 'Spent (RM)', 'Remaining (RM)', 'Usage (%)']
+            headers = ['#', 'Project Title', 'Pillar', 'Status', 'Progress (%)', 'TCV (RM)', 'Year']
             for i, h in enumerate(headers, 1):
                 ws.cell(row=4, column=i, value=h)
             style_header_row(ws, 4, len(headers))
 
-            projects = self._get_projects_qs(filters)
+            projects = self._get_projects_qs(filters).filter(tcv__isnull=False)
             for idx, p in enumerate(projects, 1):
                 row = idx + 4
-                total = float(p.budget_total or 0)
-                spent = float(p.budget_spent or 0)
-                remaining = total - spent
-                usage = round((spent / total * 100), 1) if total > 0 else 0
+                tcv_val = float(p.tcv or 0)
+                yr = p.start_date.year if p.start_date else '—'
                 status_label = p.get_status_display() if hasattr(p, 'get_status_display') else p.status
                 ws.cell(row=row, column=1, value=idx)
                 ws.cell(row=row, column=2, value=p.title)
-                ws.cell(row=row, column=3, value=status_label)
-                ws.cell(row=row, column=4, value=p.progress_percent)
-                ws.cell(row=row, column=5, value=total).number_format = rm_fmt
-                ws.cell(row=row, column=6, value=spent).number_format = rm_fmt
-                ws.cell(row=row, column=7, value=remaining).number_format = rm_fmt
-                ws.cell(row=row, column=8, value=usage)
-                for c in [5, 6, 7]:
-                    ws.cell(row=row, column=c).number_format = rm_fmt
+                ws.cell(row=row, column=3, value=p.pillar or '—')
+                ws.cell(row=row, column=4, value=status_label)
+                ws.cell(row=row, column=5, value=p.progress_percent)
+                ws.cell(row=row, column=6, value=tcv_val).number_format = rm_fmt
+                ws.cell(row=row, column=7, value=yr)
                 style_data_row(ws, row, len(headers), alt=(idx % 2 == 0))
-                ws.cell(row=row, column=4).alignment = center
-                ws.cell(row=row, column=8).alignment = center
+                ws.cell(row=row, column=5).alignment = center
 
             # Totals row
             total_row = projects.count() + 5
             ws.cell(row=total_row, column=2, value='TOTALS').font = Font(bold=True)
-            ws.cell(row=total_row, column=5, value=sum(float(p.budget_total or 0) for p in projects)).number_format = rm_fmt
-            ws.cell(row=total_row, column=5).font = Font(bold=True)
-            ws.cell(row=total_row, column=6, value=sum(float(p.budget_spent or 0) for p in projects)).number_format = rm_fmt
+            ws.cell(row=total_row, column=6, value=sum(float(p.tcv or 0) for p in projects)).number_format = rm_fmt
             ws.cell(row=total_row, column=6).font = Font(bold=True)
-            ws.cell(row=total_row, column=7, value=sum(float((p.budget_total or 0) - (p.budget_spent or 0)) for p in projects)).number_format = rm_fmt
-            ws.cell(row=total_row, column=7).font = Font(bold=True)
             for c in range(1, len(headers) + 1):
                 ws.cell(row=total_row, column=c).fill = PatternFill('solid', fgColor='DBEAFE')
                 ws.cell(row=total_row, column=c).border = border
 
-            col_widths = [5, 40, 14, 14, 18, 18, 18, 12]
+            col_widths = [5, 42, 20, 14, 14, 20, 10]
             for i, w in enumerate(col_widths, 1):
                 ws.column_dimensions[get_column_letter(i)].width = w
 
@@ -345,7 +466,7 @@ class ExportReport(APIView):
             col_map = {
                 'title': 'Project Title', 'status': 'Status', 'priority': 'Priority',
                 'start_date': 'Start Date', 'end_date': 'End Date', 'progress': 'Progress (%)',
-                'budget': 'Budget (RM)', 'spent': 'Spent (RM)', 'health': 'Health Score',
+                'tcv': 'TCV (RM)', 'health': 'Health Score',
             }
             active_cols = [c for c in columns if c in col_map]
             headers = ['#'] + [col_map[c] for c in active_cols]
@@ -365,12 +486,8 @@ class ExportReport(APIView):
                     elif col == 'start_date': val = str(p.start_date or '')
                     elif col == 'end_date': val = str(p.end_date or '')
                     elif col == 'progress': val = p.progress_percent
-                    elif col == 'budget':
-                        cell = ws.cell(row=row, column=ci, value=float(p.budget_total or 0))
-                        cell.number_format = rm_fmt
-                        continue
-                    elif col == 'spent':
-                        cell = ws.cell(row=row, column=ci, value=float(p.budget_spent or 0))
+                    elif col == 'tcv':
+                        cell = ws.cell(row=row, column=ci, value=float(p.tcv or 0) if p.tcv is not None else None)
                         cell.number_format = rm_fmt
                         continue
                     elif col == 'health': val = p.health_score
@@ -432,7 +549,7 @@ class ExportReport(APIView):
             ws['A2'].alignment = center
             ws.row_dimensions[1].height = 28
             ws.row_dimensions[2].height = 16
-            headers = ['#', 'Title', 'Status', 'Priority', 'Start Date', 'End Date', 'Progress (%)', 'Budget (RM)']
+            headers = ['#', 'Title', 'Status', 'Priority', 'Start Date', 'End Date', 'Progress (%)', 'TCV (RM)']
             for i, h in enumerate(headers, 1):
                 ws.cell(row=4, column=i, value=h)
             style_header_row(ws, 4, len(headers))
@@ -446,7 +563,7 @@ class ExportReport(APIView):
                 ws.cell(row=row, column=5, value=str(p.start_date or ''))
                 ws.cell(row=row, column=6, value=str(p.end_date or ''))
                 ws.cell(row=row, column=7, value=p.progress_percent)
-                cell = ws.cell(row=row, column=8, value=float(p.budget_total or 0))
+                cell = ws.cell(row=row, column=8, value=float(p.tcv or 0) if p.tcv is not None else None)
                 cell.number_format = rm_fmt
                 style_data_row(ws, row, len(headers), alt=(idx % 2 == 0))
             col_widths = [5, 40, 14, 12, 14, 14, 14, 18]
@@ -585,19 +702,16 @@ class ExportReport(APIView):
         story.append(Spacer(1, 10))
 
         if report_type == 'budget':
-            story.append(Paragraph('Budget Summary by Project', style_section))
-            projects = self._get_projects_qs(filters)
-            total_budget = sum(float(p.budget_total or 0) for p in projects)
-            total_spent = sum(float(p.budget_spent or 0) for p in projects)
-            total_remaining = total_budget - total_spent
+            story.append(Paragraph('Total Contract Value (TCV) Summary by Project', style_section))
+            projects = self._get_projects_qs(filters).filter(tcv__isnull=False)
+            total_tcv = sum(float(p.tcv or 0) for p in projects)
 
             # Summary KPI row
             kpi_data = [
-                ['TOTAL BUDGET', 'TOTAL SPENT', 'TOTAL REMAINING', 'OVERALL USAGE'],
-                [fmt_rm(total_budget), fmt_rm(total_spent), fmt_rm(total_remaining),
-                 f'{(total_spent/total_budget*100):.1f}%' if total_budget > 0 else '0.0%'],
+                ['TOTAL TCV', 'PROJECTS WITH TCV', 'TOTAL PROJECTS'],
+                [fmt_rm(total_tcv), str(projects.count()), str(self._get_projects_qs(filters).count())],
             ]
-            kpi_table = Table(kpi_data, colWidths=[None, None, None, None], hAlign='CENTER')
+            kpi_table = Table(kpi_data, colWidths=[None, None, None], hAlign='CENTER')
             kpi_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), BRAND_DARK),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -617,40 +731,32 @@ class ExportReport(APIView):
             story.append(Spacer(1, 14))
 
             # Detail table
-            headers = ['#', 'Project Title', 'Status', 'Progress', 'Budget (RM)', 'Spent (RM)', 'Remaining (RM)', 'Usage']
-            col_widths_budget = [1*cm, 7*cm, 2.2*cm, 1.8*cm, 3.2*cm, 3.2*cm, 3.2*cm, 1.8*cm]
+            headers = ['#', 'Project Title', 'Pillar', 'Status', 'Progress', 'TCV (RM)', 'Year']
+            col_widths_budget = [1*cm, 7*cm, 3.5*cm, 2.2*cm, 1.8*cm, 3.5*cm, 1.8*cm]
             rows = [headers]
             for idx, p in enumerate(projects, 1):
-                total = float(p.budget_total or 0)
-                spent = float(p.budget_spent or 0)
-                remaining = total - spent
-                usage = round((spent / total * 100), 1) if total > 0 else 0
-                over = spent > total
+                tcv_val = float(p.tcv or 0)
+                yr = str(p.start_date.year) if p.start_date else '—'
                 rows.append([
                     str(idx),
                     Paragraph(p.title, style_cell),
+                    p.pillar or '—',
                     p.status,
                     fmt_pct(p.progress_percent),
-                    Paragraph(fmt_rm(total), style_cell_right),
-                    Paragraph(fmt_rm(spent), style_cell_right),
-                    Paragraph(fmt_rm(remaining), style_cell_right),
-                    fmt_pct(usage),
+                    Paragraph(fmt_rm(tcv_val), style_cell_right),
+                    yr,
                 ])
 
             rows.append([
                 '', Paragraph('<b>TOTALS</b>', style_cell),
-                '', '',
-                Paragraph(f'<b>{fmt_rm(total_budget)}</b>', style_cell_right),
-                Paragraph(f'<b>{fmt_rm(total_spent)}</b>', style_cell_right),
-                Paragraph(f'<b>{fmt_rm(total_remaining)}</b>', style_cell_right),
-                fmt_pct((total_spent / total_budget * 100) if total_budget > 0 else 0),
+                '', '', '',
+                Paragraph(f'<b>{fmt_rm(total_tcv)}</b>', style_cell_right),
+                '',
             ])
 
             tbl = Table(rows, colWidths=col_widths_budget, repeatRows=1)
             tbl.setStyle(build_table_style(len(rows) - 1, has_totals=True))
-            # Right-align currency columns
-            for col in [4, 5, 6]:
-                tbl.setStyle(TableStyle([('ALIGN', (col, 1), (col, -1), 'RIGHT')]))
+            tbl.setStyle(TableStyle([('ALIGN', (5, 1), (5, -1), 'RIGHT')]))
             story.append(tbl)
 
         elif report_type == 'overview':
@@ -661,14 +767,14 @@ class ExportReport(APIView):
             col_label = {
                 'title': 'Project Title', 'status': 'Status', 'priority': 'Priority',
                 'start_date': 'Start Date', 'end_date': 'End Date', 'progress': 'Progress',
-                'budget': 'Budget (RM)', 'spent': 'Spent (RM)', 'health': 'Health',
+                'tcv': 'TCV (RM)', 'health': 'Health',
             }
             active_cols = [c for c in columns if c in col_label]
             headers = ['#'] + [col_label[c] for c in active_cols]
             widths_map = {
                 'title': 7 * cm, 'status': 2.5 * cm, 'priority': 2 * cm,
                 'start_date': 2.5 * cm, 'end_date': 2.5 * cm, 'progress': 2 * cm,
-                'budget': 3 * cm, 'spent': 3 * cm, 'health': 2 * cm,
+                'tcv': 3 * cm, 'health': 2 * cm,
             }
             col_widths_ov = [1 * cm] + [widths_map.get(c, 2.5 * cm) for c in active_cols]
 
@@ -682,8 +788,7 @@ class ExportReport(APIView):
                     elif col == 'start_date': row.append(str(p.start_date or '—'))
                     elif col == 'end_date': row.append(str(p.end_date or '—'))
                     elif col == 'progress': row.append(fmt_pct(p.progress_percent))
-                    elif col == 'budget': row.append(Paragraph(fmt_rm(float(p.budget_total or 0)), style_cell_right))
-                    elif col == 'spent': row.append(Paragraph(fmt_rm(float(p.budget_spent or 0)), style_cell_right))
+                    elif col == 'tcv': row.append(Paragraph(fmt_rm(float(p.tcv or 0)) if p.tcv is not None else '—', style_cell_right))
                     elif col == 'health': row.append(fmt_pct(p.health_score))
                     else: row.append('')
                 rows.append(row)
@@ -861,3 +966,447 @@ class CalendarCustomEventListCreate(ListCreateAPIView):
 class CalendarCustomEventDelete(DestroyAPIView):
     from .models import CalendarCustomEvent
     queryset = CalendarCustomEvent.objects.all()
+
+
+class ImportProjectFromExcel(APIView):
+    """
+    Parse an uploaded Excel file and return detected project fields.
+    Supports smart header matching so supervisors can use any column naming convention.
+    POST with multipart: file=<xlsx/xls file>
+    Returns: list of parsed project dicts ready for creation.
+    """
+    parser_classes_override = None  # uses default DRF parsers
+
+    # Mapping of recognised column header keywords → project field
+    # Includes English, Malay (BM), and common mixed-language variants
+    FIELD_ALIASES = {
+        'title': [
+            # English
+            'project name', 'project title', 'title', 'name', 'project',
+            # Malay
+            'nama projek', 'nama project', 'tajuk projek', 'tajuk projek ict',
+            'nama', 'tajuk', 'projek',
+        ],
+        'client_name': [
+            # English
+            'client', 'client name', 'company', 'customer', 'organisation', 'organization',
+            'client / company', 'employer',
+            # Malay
+            'agensi', 'pelanggan', 'syarikat', 'syarikat pelanggan',
+            'agensi / pelanggan', 'agensi pelanggan', 'kementerian',
+            'jabatan pelanggan', 'pemilik projek', 'pemohon',
+        ],
+        'project_manager': [
+            # English
+            'project manager', 'manager', 'contact person', 'contact', 'pic',
+            'person in charge', 'project lead', 'lead',
+            # Malay
+            'pengurus projek', 'pengurus', 'ketua projek', 'penyelaras projek',
+            'pegawai projek', 'pegawai bertanggungjawab', 'ketua pasukan',
+            'pengurus program', 'urus setia',
+        ],
+        'pillar': [
+            # English
+            'pillar', 'business pillar', 'category', 'division', 'unit', 'department',
+            'sector', 'domain', 'vertical',
+            # Malay
+            'tiang', 'tiang ict', 'tiang strategik', 'teras', 'sektor',
+            'kategori', 'bahagian', 'bidang', 'fokus', 'kluster',
+        ],
+        'description': [
+            # English
+            'description', 'scope', 'scope of works', 'scope of work',
+            'details', 'brief', 'project description', 'objective', 'deliverable',
+            # Malay
+            'skop kerja', 'skop', 'skop projek', 'perihal', 'keterangan',
+            'huraian', 'butiran', 'objektif', 'penerangan', 'ringkasan',
+        ],
+        'status': [
+            # English
+            'status', 'project status', 'state', 'current status',
+            # Malay
+            'status projek', 'status semasa', 'keadaan projek', 'keadaan',
+            'situasi', 'tahap projek',
+        ],
+        'priority': [
+            # English
+            'priority', 'urgency', 'importance', 'priority level',
+            # Malay
+            'keutamaan', 'prioriti', 'tahap keutamaan', 'darjah keutamaan',
+            'kepentingan',
+        ],
+        'start_date': [
+            # English
+            'start date', 'start', 'commencement date', 'begin date', 'from date',
+            'kick-off date', 'kickoff', 'project start',
+            # Malay
+            'tarikh mula', 'tarikh permulaan', 'tarikh bermula',
+            'tarikh mula projek', 'mula', 'bermula',
+        ],
+        'end_date': [
+            # English
+            'end date', 'end', 'completion date', 'deadline', 'due date',
+            'to date', 'finish date', 'target date', 'expected completion',
+            # Malay
+            'tarikh tamat', 'tarikh siap', 'tarikh akhir', 'tarikh selesai',
+            'tarikh tamat projek', 'tarikh habis', 'tarikh sasaran', 'tamat',
+        ],
+        'progress_percent': [
+            # English
+            'progress', 'completion', 'completed', 'percent', '%',
+            'completion %', 'progress %', 'progress (%)', '% complete',
+            'percentage', 'percent complete',
+            # Malay
+            'peratus siap', 'peratus siap (%)', 'peratus', 'siap (%)',
+            'pencapaian', 'kemajuan', '% siap', 'peratusan siap',
+        ],
+        'tcv': [
+            # English
+            'tcv', 'total contract value', 'contract value', 'value', 'amount',
+            'contract amount', 'value (rm)', 'tcv (rm)', 'total value',
+            'total contract value (rm)', 'project value', 'contract sum',
+            'project cost', 'budget',
+            # Malay
+            'nilai kontrak', 'nilai kontrak (rm)', 'jumlah kontrak',
+            'nilai projek', 'kos projek', 'harga kontrak', 'jumlah nilai',
+            'nilai', 'kontrak nilai', 'amaun kontrak',
+        ],
+    }
+
+    STATUS_MAP = {
+        # English
+        'draft': 'DRAFT', 'new': 'DRAFT', 'pending': 'DRAFT',
+        'ongoing': 'ONGOING', 'in progress': 'ONGOING', 'active': 'ONGOING',
+        'in-progress': 'ONGOING', 'running': 'ONGOING', 'executing': 'ONGOING',
+        'on hold': 'ON_HOLD', 'hold': 'ON_HOLD', 'on-hold': 'ON_HOLD',
+        'paused': 'ON_HOLD', 'suspended': 'ON_HOLD',
+        'completed': 'COMPLETED', 'done': 'COMPLETED', 'finished': 'COMPLETED',
+        'complete': 'COMPLETED', 'closed': 'COMPLETED',
+        'cancelled': 'CANCELLED', 'canceled': 'CANCELLED', 'dropped': 'CANCELLED',
+        'terminated': 'CANCELLED',
+        'expired': 'EXPIRED',
+        # Malay
+        'draf': 'DRAFT', 'baharu': 'DRAFT', 'belum mula': 'DRAFT',
+        'sedang berjalan': 'ONGOING', 'dalam proses': 'ONGOING',
+        'aktif': 'ONGOING', 'berjalan': 'ONGOING', 'dalam pelaksanaan': 'ONGOING',
+        'ditangguhkan': 'ON_HOLD', 'tangguh': 'ON_HOLD', 'penangguhan': 'ON_HOLD',
+        'digantung': 'ON_HOLD',
+        'selesai': 'COMPLETED', 'siap': 'COMPLETED', 'tamat': 'COMPLETED',
+        'telah siap': 'COMPLETED', 'sudah siap': 'COMPLETED',
+        'dibatalkan': 'CANCELLED', 'batal': 'CANCELLED', 'tidak diteruskan': 'CANCELLED',
+    }
+    PRIORITY_MAP = {
+        # English
+        'low': 'LOW', 'minor': 'LOW',
+        'medium': 'MEDIUM', 'med': 'MEDIUM', 'normal': 'MEDIUM', 'moderate': 'MEDIUM',
+        'high': 'HIGH', 'major': 'HIGH',
+        'critical': 'CRITICAL', 'urgent': 'CRITICAL', 'very high': 'CRITICAL',
+        # Malay
+        'rendah': 'LOW',
+        'sederhana': 'MEDIUM', 'pertengahan': 'MEDIUM',
+        'tinggi': 'HIGH',
+        'kritikal': 'CRITICAL', 'mendesak': 'CRITICAL', 'genting': 'CRITICAL',
+    }
+
+    def _match_header(self, header: str) -> str | None:
+        """Return the project field name for a given column header, or None.
+        Uses exact match, substring match, then fuzzy match (difflib) as fallback.
+        """
+        from difflib import get_close_matches
+        cleaned = header.strip().lower().replace('_', ' ')
+        # 1. Exact match in alias list
+        for field, aliases in self.FIELD_ALIASES.items():
+            if cleaned in aliases:
+                return field
+        # 2. Substring: header contains alias or alias contains header
+        for field, aliases in self.FIELD_ALIASES.items():
+            for a in aliases:
+                if a in cleaned or cleaned in a:
+                    return field
+        # 3. Fuzzy match using difflib across all aliases
+        all_aliases = []
+        alias_to_field = {}
+        for field, aliases in self.FIELD_ALIASES.items():
+            for a in aliases:
+                all_aliases.append(a)
+                alias_to_field[a] = field
+        fuzzy = get_close_matches(cleaned, all_aliases, n=1, cutoff=0.72)
+        if fuzzy:
+            return alias_to_field[fuzzy[0]]
+        return None
+
+    def _parse_date(self, value) -> str | None:
+        if value is None:
+            return None
+        if hasattr(value, 'strftime'):
+            return value.strftime('%Y-%m-%d')
+        s = str(value).strip()
+        from datetime import datetime
+        for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y', '%d %b %Y', '%d %B %Y'):
+            try:
+                return datetime.strptime(s, fmt).strftime('%Y-%m-%d')
+            except ValueError:
+                continue
+        return None
+
+    def _parse_number(self, value) -> float | None:
+        if value is None:
+            return None
+        try:
+            return float(str(value).replace(',', '').replace('RM', '').replace('rm', '').strip())
+        except (ValueError, TypeError):
+            return None
+
+    def post(self, request):
+        uploaded = request.FILES.get('file')
+        if not uploaded:
+            return Response({'error': 'No file uploaded.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        filename = uploaded.name.lower()
+        if not (filename.endswith('.xlsx') or filename.endswith('.xls')):
+            return Response({'error': 'Only .xlsx and .xls files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            import openpyxl
+            from io import BytesIO
+            wb = openpyxl.load_workbook(BytesIO(uploaded.read()), data_only=True)
+            ws = wb.active
+        except Exception as e:
+            return Response({'error': f'Could not read Excel file: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        rows = list(ws.iter_rows(values_only=True))
+        if not rows:
+            return Response({'error': 'Excel file is empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find header row: first row with at least 2 non-empty cells that match known fields
+        header_row_idx = 0
+        col_map: dict[int, str] = {}
+        for i, row in enumerate(rows[:10]):  # search first 10 rows for headers
+            matched: dict[int, str] = {}
+            for j, cell in enumerate(row):
+                if cell is None:
+                    continue
+                field = self._match_header(str(cell))
+                if field:
+                    matched[j] = field
+            if len(matched) >= 2:
+                header_row_idx = i
+                col_map = matched
+                break
+
+        if not col_map:
+            return Response(
+                {'error': 'Could not detect project columns. Please ensure your Excel has recognisable headers like: Project Name, Client, Pillar, Status, Start Date, TCV, etc.'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        projects = []
+        unmatched_col_map: dict[int, str] = {}  # col_idx → original header name (unmatched)
+
+        # Collect unmatched column indices and their header names
+        header_row = rows[header_row_idx]
+        for j, cell in enumerate(header_row):
+            if cell and j not in col_map:
+                unmatched_col_map[j] = str(cell).strip()
+
+        for row in rows[header_row_idx + 1:]:
+            # Skip fully empty rows
+            if all(v is None or str(v).strip() == '' for v in row):
+                continue
+
+            proj: dict = {
+                'title': '',
+                'client_name': '',
+                'project_manager': '',
+                'pillar': '',
+                'description': '',
+                'status': 'DRAFT',
+                'priority': 'MEDIUM',
+                'start_date': None,
+                'end_date': None,
+                'progress_percent': 0,
+                'tcv': None,
+                'custom_fields': {},
+            }
+            for col_idx, field_name in col_map.items():
+                if col_idx >= len(row):
+                    continue
+                raw = row[col_idx]
+                if raw is None:
+                    continue
+                val = str(raw).strip() if not hasattr(raw, 'strftime') else raw
+
+                if field_name == 'status':
+                    proj['status'] = self.STATUS_MAP.get(str(val).lower(), 'DRAFT')
+                elif field_name == 'priority':
+                    proj['priority'] = self.PRIORITY_MAP.get(str(val).lower(), 'MEDIUM')
+                elif field_name in ('start_date', 'end_date'):
+                    proj[field_name] = self._parse_date(raw)
+                elif field_name == 'progress_percent':
+                    num = self._parse_number(val)
+                    proj['progress_percent'] = int(min(100, max(0, num))) if num is not None else 0
+                elif field_name == 'tcv':
+                    proj['tcv'] = self._parse_number(val)
+                else:
+                    proj[field_name] = str(val)
+
+            # Capture unmatched columns as custom_fields
+            for col_idx, header_name in unmatched_col_map.items():
+                if col_idx >= len(row):
+                    continue
+                raw = row[col_idx]
+                if raw is None or str(raw).strip() == '':
+                    continue
+                proj['custom_fields'][header_name] = str(raw).strip()
+
+            if proj.get('title'):
+                projects.append(proj)
+
+        if not projects:
+            return Response(
+                {'error': 'No valid project rows found. Ensure at least one row has a Project Name.'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        return Response({
+            'detected_columns': list(col_map.values()),
+            'unmatched_headers': list(unmatched_col_map.values()),
+            'projects': projects,
+            'count': len(projects),
+        })
+
+
+class BulkCreateProjectsFromExcel(APIView):
+    """
+    POST: Receive a list of pre-parsed project dicts and create them all.
+    Body: { "projects": [...] }
+    Returns per-project success/error result.
+    """
+
+    def post(self, request):
+        projects_data = request.data.get('projects', [])
+        if not projects_data or not isinstance(projects_data, list):
+            return Response({'error': 'No projects data provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.projects.models import Project, Pillar
+        from django.utils.text import slugify
+
+        results = []
+        created_count = 0
+        failed_count = 0
+
+        for idx, proj in enumerate(projects_data):
+            title = str(proj.get('title', '')).strip()
+            if not title:
+                results.append({'index': idx, 'title': '(no title)', 'status': 'failed', 'error': 'Missing title'})
+                failed_count += 1
+                continue
+
+            try:
+                # Auto-create pillar if it doesn't exist
+                pillar_name = str(proj.get('pillar', '')).strip()
+                if pillar_name:
+                    Pillar.objects.get_or_create(name=pillar_name)
+
+                # Build slug
+                base_slug = slugify(title)
+                slug = base_slug
+                n = 1
+                while Project.objects.filter(slug=slug).exists():
+                    slug = f"{base_slug}-{n}"
+                    n += 1
+
+                # Parse numeric fields safely
+                def safe_int(v, default=0, lo=0, hi=100):
+                    try:
+                        return max(lo, min(hi, int(float(str(v)))))
+                    except (TypeError, ValueError):
+                        return default
+
+                def safe_decimal(v):
+                    if v is None:
+                        return None
+                    try:
+                        from decimal import Decimal
+                        return Decimal(str(v).replace(',', '').strip())
+                    except Exception:
+                        return None
+
+                status_val = str(proj.get('status', 'DRAFT')).upper()
+                valid_statuses = {s[0] for s in Project.Status.choices}
+                if status_val not in valid_statuses:
+                    status_val = 'DRAFT'
+
+                priority_val = str(proj.get('priority', 'MEDIUM')).upper()
+                valid_priorities = {p[0] for p in Project.Priority.choices}
+                if priority_val not in valid_priorities:
+                    priority_val = 'MEDIUM'
+
+                def parse_date(v):
+                    if not v or str(v).strip() in ('', 'None'):
+                        return None
+                    if hasattr(v, 'date'):
+                        return v.date()
+                    s = str(v).strip()
+                    from datetime import datetime
+                    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y', '%d %b %Y', '%d %B %Y'):
+                        try:
+                            return datetime.strptime(s, fmt).date()
+                        except ValueError:
+                            continue
+                    return None
+
+                custom_fields = proj.get('custom_fields', {})
+                if not isinstance(custom_fields, dict):
+                    custom_fields = {}
+
+                p = Project.objects.create(
+                    title=title,
+                    slug=slug,
+                    description=str(proj.get('description', '')),
+                    pillar=pillar_name,
+                    client_name=str(proj.get('client_name', '')),
+                    project_manager=str(proj.get('project_manager', '')),
+                    status=status_val,
+                    priority=priority_val,
+                    start_date=parse_date(proj.get('start_date')),
+                    end_date=parse_date(proj.get('end_date')),
+                    progress_percent=safe_int(proj.get('progress_percent', 0)),
+                    tcv=safe_decimal(proj.get('tcv')),
+                    custom_fields=custom_fields,
+                    owner=request.user,
+                    created_by=request.user,
+                )
+
+                # Log activity
+                try:
+                    from apps.comments.models import ActivityLog
+                    ActivityLog.objects.create(
+                        project=p,
+                        actor=request.user,
+                        action='created',
+                        description=f'created project via Excel bulk import',
+                    )
+                except Exception:
+                    pass
+
+                results.append({
+                    'index': idx,
+                    'title': title,
+                    'status': 'created',
+                    'id': str(p.id),
+                    'created_at': p.created_at.isoformat(),
+                })
+                created_count += 1
+
+            except Exception as e:
+                results.append({'index': idx, 'title': title, 'status': 'failed', 'error': str(e)})
+                failed_count += 1
+
+        return Response({
+            'created': created_count,
+            'failed': failed_count,
+            'total': len(projects_data),
+            'results': results,
+        }, status=status.HTTP_201_CREATED if created_count > 0 else status.HTTP_400_BAD_REQUEST)
+

@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardAPI } from '@/api/endpoints';
 import { DashboardData } from '@/types';
+import { useAuthStore } from '@/stores/authStore';
 import { LoadingSpinner, StatusBadge, PriorityBadge, ProgressBar } from '@/components/ui';
-import { formatDate, timeAgo } from '@/utils/helpers';
+import { timeAgo, formatCurrency } from '@/utils/helpers';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import {
   FolderKanban, CheckCircle2, Clock, AlertTriangle,
   TrendingUp, ListTodo, ArrowRight,
-  Activity, Zap, FileEdit, PauseCircle, XCircle,
+  Activity, Zap, FileEdit, PauseCircle, XCircle, DollarSign,
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -23,17 +24,23 @@ const PRIORITY_COLORS: Record<string, string> = {
   Low: '#22c55e', Medium: '#eab308', High: '#f97316', Critical: '#ef4444',
 };
 
+const TCV_YEAR_COLORS = ['#6366f1','#22c55e','#eab308','#f97316','#ef4444','#8b5cf6','#06b6d4'];
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const canSeeTCV = user?.is_superuser || user?.access_level === 'ADMIN' || user?.access_level === 'FULL_ACCESS' || user?.access_level === 'PILLAR_BASED';
 
-  useEffect(() => {
+  const fetchDashboard = () => {
     dashboardAPI.get()
       .then((r) => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchDashboard(); }, []);
 
   if (loading) return <LoadingSpinner />;
   if (!data) return <div className="text-center text-slate-500 py-12">Failed to load dashboard</div>;
@@ -86,6 +93,22 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* TCV Summary — single card for supervisors/managers */}
+      {canSeeTCV && (
+        <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 p-5 text-white shadow-lg relative overflow-hidden">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-1">Total Contract Value (RM)</p>
+              <p className="text-3xl font-bold">{formatCurrency(data.budget.total)}</p>
+              <p className="text-sm text-white/70 mt-0.5">Across all active projects</p>
+            </div>
+            <div className="bg-white/15 rounded-xl p-2.5"><DollarSign className="h-5 w-5 text-white" /></div>
+          </div>
+          <div className="absolute -bottom-4 -right-4 h-20 w-20 rounded-full bg-white/5" />
+          <div className="absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-white/5" />
+        </div>
+      )}
+
       {/* Main row: Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Status distribution donut */}
@@ -123,27 +146,49 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Monthly completed area chart */}
+        {/* TCV by Year bar chart */}
         <div className="card p-5">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Monthly Completions</h3>
-          {data.charts.monthly_completed.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={data.charts.monthly_completed}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">TCV by Year (RM)</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Total Contract Value — annual breakdown</p>
+            </div>
+            <button onClick={() => navigate('/reports?tab=budget')} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+              Full report <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
+          {data.charts.tcv_by_year && data.charts.tcv_by_year.some((d) => d.tcv > 0) ? (
+            <ResponsiveContainer width="100%" height={270}>
+              <BarChart data={data.charts.tcv_by_year} barSize={40}>
                 <defs>
-                  <linearGradient id="gradCompleted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
+                  {data.charts.tcv_by_year.map((_, i) => (
+                    <linearGradient key={i} id={`tcvYearGrad${i}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={TCV_YEAR_COLORS[i % TCV_YEAR_COLORS.length]} stopOpacity={1} />
+                      <stop offset="100%" stopColor={TCV_YEAR_COLORS[i % TCV_YEAR_COLORS.length]} stopOpacity={0.7} />
+                    </linearGradient>
+                  ))}
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
-                <YAxis tick={{ fontSize: 12, fill: 'var(--text-muted)' }} allowDecimals={false} />
-                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px' }} />
-                <Area type="monotone" dataKey="completed" stroke="#6366f1" strokeWidth={2} fill="url(#gradCompleted)" />
-              </AreaChart>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="year" tick={{ fontSize: 12, fontWeight: 600, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={(v) => `RM ${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(v: number) => [formatCurrency(v), 'TCV']}
+                  labelFormatter={(l) => `Year ${l}`}
+                  contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '12px' }}
+                />
+                <Bar dataKey="tcv" name="TCV (RM)" radius={[6, 6, 0, 0]}>
+                  {data.charts.tcv_by_year.map((_, i) => (
+                    <Cell key={i} fill={`url(#tcvYearGrad${i})`} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[250px] flex items-center justify-center text-sm text-slate-400">No data yet</div>
+            <div className="h-[270px] flex flex-col items-center justify-center text-center gap-2">
+              <DollarSign className="h-10 w-10 text-slate-200 dark:text-slate-700" />
+              <p className="text-sm text-slate-400">No TCV data yet</p>
+              <p className="text-xs text-slate-300 dark:text-slate-600">Set TCV values on projects — grouped by year automatically</p>
+            </div>
           )}
         </div>
       </div>

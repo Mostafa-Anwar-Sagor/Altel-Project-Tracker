@@ -114,14 +114,14 @@ export const reminderAPI = {
 
 // Dashboard
 export const dashboardAPI = {
-  get: () => api.get<DashboardData>('/dashboard/'),
+  get: (params?: Record<string, string>) => api.get<DashboardData>('/dashboard/', { params }),
 };
 
 // Reports
 export const reportAPI = {
   overview: () => api.get('/reports/overview/'),
   progressTrend: (params?: Record<string, string>) => api.get('/reports/progress-trend/', { params }),
-  budget: () => api.get('/reports/budget/'),
+  budget: (params?: Record<string, string>) => api.get('/reports/budget/', { params }),
   timeTracking: (params?: Record<string, string>) => api.get('/reports/time-tracking/', { params }),
   teamProductivity: (params?: Record<string, string>) => api.get('/reports/team-productivity/', { params }),
   upcomingDeadlines: (days = 30) => api.get('/reports/upcoming-deadlines/', { params: { days } }),
@@ -132,6 +132,10 @@ export const reportAPI = {
   customEvents: () => api.get('/reports/calendar/custom-events/'),
   createCustomEvent: (data: Record<string, unknown>) => api.post('/reports/calendar/custom-events/', data),
   deleteCustomEvent: (id: string) => api.delete(`/reports/calendar/custom-events/${id}/`),
+  importExcel: (data: FormData) =>
+    api.post('/reports/import-excel/', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  bulkCreateExcel: (projects: Record<string, unknown>[]) =>
+    api.post('/reports/import-excel/bulk-create/', { projects }),
 };
 
 // Tags & Categories

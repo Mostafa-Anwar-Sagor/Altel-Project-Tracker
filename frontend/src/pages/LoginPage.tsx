@@ -31,7 +31,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Zap className="h-10 w-10 text-indigo-600" />
-            <span className="text-3xl font-bold text-slate-900 dark:text-white">ProTracker</span>
+            <span className="text-3xl font-bold text-slate-900 dark:text-white">Project Tracker</span>
           </div>
           <p className="text-base font-medium text-slate-600 dark:text-slate-300">Project Management System</p>
           <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Sign in to your account</p>

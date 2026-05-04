@@ -5,11 +5,13 @@ import { formatCurrency } from '@/utils/helpers';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
+  LineChart, Line, ReferenceLine,
 } from 'recharts';
 import {
   TrendingUp, DollarSign, Users, Clock,
   FolderKanban, AlertTriangle, CheckCircle2, Activity,
   FileText, FileSpreadsheet, Settings2, X, ChevronDown,
+  Target, Layers, BarChart2, Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -36,8 +38,7 @@ const OVERVIEW_COLUMNS = [
   { key: 'start_date', label: 'Start Date' },
   { key: 'end_date', label: 'End Date' },
   { key: 'progress', label: 'Progress' },
-  { key: 'budget', label: 'Budget (RM)' },
-  { key: 'spent', label: 'Spent (RM)' },
+  { key: 'tcv', label: 'TCV (RM)' },
   { key: 'health', label: 'Health Score' },
 ];
 
@@ -145,6 +146,7 @@ export default function ReportsPage() {
   const [tab, setTab] = useState<ReportTab>('overview');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [showCustom, setShowCustom] = useState(false);
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
   const [filters, setFilters] = useState<ExportFilters>({
@@ -153,16 +155,27 @@ export default function ReportsPage() {
   });
 
   useEffect(() => {
-    setLoading(true);
-    setData(null);
-    const fetcher = {
-      overview: reportAPI.overview,
-      budget: reportAPI.budget,
-      time: reportAPI.timeTracking,
-      team: reportAPI.teamProductivity,
-      workload: reportAPI.workload,
-    }[tab];
-    fetcher().then((r) => { setData(r.data); setLoading(false); }).catch(() => setLoading(false));
+    let cancelled = false;
+
+    const load = (silent = false) => {
+      if (!silent) { setLoading(true); setData(null); }
+      const fetcher = {
+        overview: reportAPI.overview,
+        budget: reportAPI.budget,
+        time: reportAPI.timeTracking,
+        team: reportAPI.teamProductivity,
+        workload: reportAPI.workload,
+      }[tab];
+      fetcher()
+        .then((r) => { if (!cancelled) { setData(r.data); setLastRefresh(new Date()); } })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setLoading(false); });
+    };
+
+    load();
+    // Auto-refresh every 60 s so live metrics (overdue, progress, etc.) stay current
+    const timer = setInterval(() => load(true), 60_000);
+    return () => { cancelled = true; clearInterval(timer); };
   }, [tab]);
 
   const handleExport = (format: 'excel' | 'pdf') => {
@@ -185,7 +198,7 @@ export default function ReportsPage() {
 
   const tabs: { key: ReportTab; label: string; icon: typeof TrendingUp }[] = [
     { key: 'overview', label: 'Overview', icon: TrendingUp },
-    { key: 'budget', label: 'Budget (RM)', icon: DollarSign },
+    { key: 'budget', label: 'TCV (RM)', icon: DollarSign },
     { key: 'time', label: 'Time Tracking', icon: Clock },
     { key: 'team', label: 'Team', icon: Users },
     { key: 'workload', label: 'Workload', icon: Activity },
@@ -196,9 +209,13 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Reports & Analytics</h1>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Project Intelligence</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Generate and export project insights — values in Malaysian Ringgit (RM)
+            Data-driven insights and analytics — all values in Malaysian Ringgit (RM)
+            <span className="ml-3 inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+              Live · updated {lastRefresh.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -296,48 +313,114 @@ function OverviewTab({ data }: { data: any }) {
       }))
     : [];
 
+  const pillarData: { pillar: string; count: number }[] = data.by_pillar || [];
+  const monthData: { month: string; count: number }[] = data.by_month_created || [];
+
+  const ongoingCount = data.by_status?.ongoing || 0;
+  const completedCount = data.by_status?.completed || 0;
+  const onHoldCount = data.by_status?.['on_hold'] || 0;
+  const draftCount = data.by_status?.draft || 0;
+
   const cards = [
-    { label: 'Total Projects', value: data.total || 0, icon: FolderKanban, bg: 'bg-indigo-50 dark:bg-indigo-900/30', fg: 'text-indigo-600 dark:text-indigo-400' },
-    { label: 'Completed', value: data.by_status?.completed || 0, icon: CheckCircle2, bg: 'bg-emerald-50 dark:bg-emerald-900/30', fg: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'In Progress', value: (data.by_status?.ongoing || 0), icon: TrendingUp, bg: 'bg-blue-50 dark:bg-blue-900/30', fg: 'text-blue-600 dark:text-blue-400' },
-    { label: 'Overdue', value: data.overdue || 0, icon: AlertTriangle, bg: 'bg-red-50 dark:bg-red-900/30', fg: 'text-red-600 dark:text-red-400' },
+    {
+      label: 'Total Projects', value: data.total || 0,
+      sub: `${draftCount} draft · ${onHoldCount} on hold`,
+      icon: FolderKanban,
+      gradient: 'from-indigo-500 to-indigo-600',
+    },
+    {
+      label: 'Active / Ongoing', value: ongoingCount,
+      sub: `${((ongoingCount / Math.max(data.total, 1)) * 100).toFixed(0)}% of portfolio`,
+      icon: Zap,
+      gradient: 'from-blue-500 to-cyan-500',
+    },
+    {
+      label: 'Completed', value: completedCount,
+      sub: `${data.completion_rate ?? 0}% completion rate`,
+      icon: CheckCircle2,
+      gradient: 'from-emerald-500 to-green-500',
+    },
+    {
+      label: 'Avg Progress', value: `${data.avg_progress ?? 0}%`,
+      sub: 'across active projects',
+      icon: Target,
+      gradient: 'from-violet-500 to-purple-600',
+    },
+    {
+      label: 'Expired / Overdue', value: data.overdue || 0,
+      sub: 'past end date, not completed',
+      icon: AlertTriangle,
+      gradient: 'from-red-500 to-rose-500',
+    },
+    {
+      label: 'Pillars', value: pillarData.length || 0,
+      sub: pillarData.slice(0, 2).map((p) => p.pillar).join(' · ') || 'No pillar data',
+      icon: Layers,
+      gradient: 'from-amber-500 to-orange-500',
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="card p-5 hover:shadow-md transition-shadow">
-            <div className={`p-2.5 rounded-xl inline-flex ${c.bg} ${c.fg} mb-3`}><c.icon className="h-5 w-5" /></div>
-            <p className="text-3xl font-bold text-slate-800 dark:text-white">{c.value}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{c.label}</p>
+          <div key={c.label} className="card p-5 hover:shadow-md transition-shadow relative overflow-hidden">
+            <div className={`absolute inset-0 bg-gradient-to-br ${c.gradient} opacity-5`} />
+            <div className={`p-2.5 rounded-xl inline-flex bg-gradient-to-br ${c.gradient} text-white mb-3 shadow-sm`}>
+              <c.icon className="h-4 w-4" />
+            </div>
+            <p className="text-2xl font-bold text-slate-800 dark:text-white">{c.value}</p>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{c.label}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">{c.sub}</p>
           </div>
         ))}
       </div>
+
+      {/* Charts row 1: Status donut + Priority bar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-6">
-          <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-4">Status Distribution</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart2 className="h-4 w-4 text-indigo-500" />
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Status Distribution</h3>
+          </div>
           {statusData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={{ stroke: '#94a3b8' }}>
-                  {statusData.map((e, i) => <Cell key={i} fill={e.fill} />)}
-                </Pie>
-                <Tooltip formatter={(v: number) => [v, 'Projects']} />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col items-center gap-4">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={statusData} cx="50%" cy="50%" innerRadius={65} outerRadius={100} dataKey="value"
+                    paddingAngle={3}>
+                    {statusData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => [v, 'Projects']} contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Legend */}
+              <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center text-xs">
+                {statusData.map((s) => (
+                  <div key={s.name} className="flex items-center gap-1.5">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: s.fill }} />
+                    <span className="text-slate-600 dark:text-slate-300">{s.name}</span>
+                    <span className="font-semibold text-slate-800 dark:text-white">{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : <p className="text-sm text-slate-400 text-center py-12">No data</p>}
         </div>
+
         <div className="card p-6">
-          <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-4">Priority Distribution</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="h-4 w-4 text-violet-500" />
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Priority Distribution</h3>
+          </div>
           {priorityData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={priorityData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={priorityData} barSize={36}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 13 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} axisLine={false} tickLine={false} />
-                <Tooltip />
+                <Tooltip contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
                 <Bar dataKey="value" name="Projects" radius={[8, 8, 0, 0]}>
                   {priorityData.map((_, i) => <Cell key={i} fill={['#22c55e', '#eab308', '#f97316', '#ef4444'][i] || COLORS[i]} />)}
                 </Bar>
@@ -346,96 +429,327 @@ function OverviewTab({ data }: { data: any }) {
           ) : <p className="text-sm text-slate-400 text-center py-12">No data</p>}
         </div>
       </div>
+
+      {/* Charts row 2: Pillar breakdown + Monthly intake trend */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="h-4 w-4 text-amber-500" />
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Projects by Pillar</h3>
+          </div>
+          {pillarData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={pillarData} layout="vertical" barSize={20}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis dataKey="pillar" type="category" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={110} />
+                <Tooltip contentStyle={{ borderRadius: '10px', fontSize: '12px' }} />
+                <Bar dataKey="count" name="Projects" radius={[0, 6, 6, 0]}>
+                  {pillarData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[280px] flex flex-col items-center justify-center text-center gap-2">
+              <Layers className="h-10 w-10 text-slate-200 dark:text-slate-700" />
+              <p className="text-sm text-slate-400">No pillar data</p>
+              <p className="text-xs text-slate-300 dark:text-slate-600">Assign pillars to projects to see breakdown</p>
+            </div>
+          )}
+        </div>
+
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Project Intake Trend</h3>
+            <span className="text-xs text-slate-400 ml-auto">projects created per month (rolling 12 months)</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={monthData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+              <defs>
+                <linearGradient id="intakeDotGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#10b981" />
+                  <stop offset="100%" stopColor="#22c55e" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tick={{ fontSize: 11 }}
+                allowDecimals={false}
+                axisLine={false}
+                tickLine={false}
+                width={32}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: '10px', fontSize: '12px' }}
+                formatter={(v: number) => [v, 'Projects Created']}
+              />
+              <ReferenceLine y={0} stroke="transparent" />
+              <Line
+                type="monotone"
+                dataKey="count"
+                name="Projects Created"
+                stroke="#22c55e"
+                strokeWidth={2.5}
+                dot={{ r: 4, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
+                activeDot={{ r: 7, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
+                isAnimationActive
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 }
 
-function BudgetTab({ data }: { data: any }) {
-  const projects = data.projects || [];
-  const totals = data.totals || {};
-  const cards = [
-    { label: 'Total Budget', sublabel: 'Value (RM)', value: totals.total_budget || 0, bg: 'bg-indigo-50 dark:bg-indigo-900/30', fg: 'text-indigo-600 dark:text-indigo-400', icon: DollarSign },
-    { label: 'Total Spent', sublabel: 'Value (RM)', value: totals.total_spent || 0, bg: 'bg-rose-50 dark:bg-rose-900/30', fg: 'text-rose-600 dark:text-rose-400', icon: TrendingUp },
-    { label: 'Remaining', sublabel: 'Value (RM)', value: totals.total_remaining || 0, bg: 'bg-emerald-50 dark:bg-emerald-900/30', fg: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle2 },
-  ];
+function BudgetTab({ data: initialData }: { data: any }) {
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedPillar, setSelectedPillar] = useState<string>('');
+  const [budgetData, setBudgetData] = useState<any>(initialData);
+  const [fetching, setFetching] = useState(false);
+
+  const availableYears: string[] = Array.from(
+    new Set((budgetData?.by_year || []).map((r: any) => String(r.year)))
+  );
+  const availablePillars: string[] = Array.from(
+    new Set((budgetData?.projects || []).map((p: any) => p.pillar).filter(Boolean))
+  ) as string[];
+
+  const fetchWithFilters = (year: string) => {
+    setFetching(true);
+    const params: Record<string, string> = {};
+    if (year) params.year = year;
+    reportAPI.budget(params)
+      .then((r) => setBudgetData(r.data))
+      .catch(() => {})
+      .finally(() => setFetching(false));
+  };
+
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    fetchWithFilters(year);
+  };
+
+  // FIXED data mapping: backend sends { month: 'Jan', tcv: 0.0 } and { year: '2025', tcv: 0.0 }
+  const byYear = (budgetData?.by_year || []).map((r: any) => ({
+    year: String(r.year),
+    tcv: parseFloat(r.tcv ?? 0),
+  }));
+  const byMonth = (budgetData?.by_month || []).map((r: any) => ({
+    month: String(r.month),
+    tcv: parseFloat(r.tcv ?? 0),
+  }));
+  const byPillar = (budgetData?.by_pillar || []).map((r: any) => ({
+    pillar: r.pillar || 'Other',
+    tcv: parseFloat(r.tcv ?? 0),
+  })).filter((r: any) => !selectedPillar || r.pillar === selectedPillar);
+
+  const totals = budgetData?.totals || {};
+  const allProjects: any[] = budgetData?.projects || [];
+  const filteredProjects = selectedPillar
+    ? allProjects.filter((p: any) => p.pillar === selectedPillar)
+    : allProjects;
+  const filteredTcv = filteredProjects.reduce((s: number, p: any) => s + (p.tcv || 0), 0);
+  const displayTcv = selectedPillar ? filteredTcv : (totals.total_tcv || 0);
+
+  const PILLAR_COLORS_CHART = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        {cards.map((c) => (
-          <div key={c.label} className="card p-5 hover:shadow-md transition-shadow">
-            <div className={`p-2.5 rounded-xl inline-flex ${c.bg} ${c.fg} mb-3`}><c.icon className="h-5 w-5" /></div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{c.sublabel}</p>
-            <p className="text-xl font-bold text-slate-800 dark:text-white">{formatCurrency(c.value)}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{c.label}</p>
+      {/* ── Filter bar ── */}
+      <div className="card p-4 border border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-r from-indigo-50/60 to-white dark:from-indigo-900/10 dark:to-slate-900">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Filter by:</span>
+
+          {/* Year pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => handleYearChange('')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                !selectedYear ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+              }`}
+            >All Years</button>
+            {availableYears.map((y) => (
+              <button
+                key={y}
+                onClick={() => handleYearChange(y)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  selectedYear === y ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                }`}
+              >{y}</button>
+            ))}
+          </div>
+
+          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+
+          {/* Pillar dropdown */}
+          <select
+            value={selectedPillar}
+            onChange={(e) => setSelectedPillar(e.target.value)}
+            className="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Pillars</option>
+            {availablePillars.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+
+          {fetching && <span className="text-xs text-indigo-500 animate-pulse font-medium">Loading…</span>}
+          {selectedYear && (
+            <span className="text-xs text-indigo-700 dark:text-indigo-300 font-semibold bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 rounded-full">
+              Monthly view: {selectedYear}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Summary cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[
+          { label: 'TOTAL CONTRACT VALUE (RM)', sub: selectedPillar ? `${selectedPillar} pillar` : 'All projects with TCV', value: displayTcv, currency: true, bg: 'from-indigo-500 to-indigo-600', icon: DollarSign },
+          { label: 'PROJECTS IN REPORT SCOPE', sub: selectedPillar ? `${selectedPillar} pillar` : 'All tracked projects', value: totals.projects_total || 0, bg: 'from-slate-500 to-slate-600', icon: FolderKanban },
+        ].map((c) => (
+          <div key={c.label} className={`rounded-2xl bg-gradient-to-br ${c.bg} p-5 text-white shadow-lg relative overflow-hidden`}>
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-1">{c.label}</p>
+                <p className="text-2xl font-bold">
+                  {c.currency ? formatCurrency(c.value as number) : c.value}
+                </p>
+                <p className="text-sm text-white/70 mt-0.5">{c.sub}</p>
+              </div>
+              <div className="bg-white/15 rounded-xl p-2.5"><c.icon className="h-5 w-5 text-white" /></div>
+            </div>
+            <div className="absolute -bottom-4 -right-4 h-20 w-20 rounded-full bg-white/5" />
           </div>
         ))}
       </div>
+
+      {/* ── TCV by Year bar chart ── */}
       <div className="card p-6">
-        <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-1">Budget vs Spent (RM)</h3>
-        <p className="text-xs text-slate-400 mb-4">All values in Ringgit Malaysia</p>
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={projects.map((p: any) => ({ name: p.title?.length > 18 ? p.title.slice(0, 18) + '…' : p.title, budget: p.budget_total, spent: p.budget_spent }))}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `RM ${(v / 1000).toFixed(0)}k`} />
-            <Tooltip formatter={(v: number) => formatCurrency(v)} />
-            <Bar dataKey="budget" fill="#6366f1" name="Budget (RM)" radius={[6, 6, 0, 0]} />
-            <Bar dataKey="spent" fill="#f43f5e" name="Spent (RM)" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-base font-semibold text-slate-800 dark:text-white">TCV by Year (RM)</h3>
+          <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full uppercase tracking-wide">Click a year pill above to drill down →</span>
+        </div>
+        <p className="text-xs text-slate-400 mb-5">Total contract value grouped by project start year</p>
+        {byYear.length > 0 ? (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={byYear} barSize={52}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <XAxis dataKey="year" tick={{ fontSize: 13, fontWeight: 600 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `RM ${(v / 1000).toFixed(0)}k`} />
+              <Tooltip
+                formatter={(v: number) => [formatCurrency(v), 'TCV']}
+                labelStyle={{ fontWeight: 700 }}
+                contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+              />
+              <Bar dataKey="tcv" name="TCV (RM)" radius={[8, 8, 0, 0]}>
+                {byYear.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-48 flex flex-col items-center justify-center text-slate-400">
+            <DollarSign className="h-10 w-10 mb-2 opacity-30" />
+            <p className="text-sm">No TCV data yet — add TCV values to your projects</p>
+          </div>
+        )}
       </div>
+
+      {/* ── TCV by Pillar horizontal bar ── */}
+      <div className="card p-6">
+        <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-1">TCV by Pillar (RM)</h3>
+        <p className="text-xs text-slate-400 mb-5">Contract value distribution per business pillar</p>
+        {byPillar.length > 0 ? (
+          <ResponsiveContainer width="100%" height={Math.max(180, byPillar.length * 56)}>
+            <BarChart data={byPillar} layout="vertical" barSize={24}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `RM ${(v / 1000).toFixed(0)}k`} />
+              <YAxis type="category" dataKey="pillar" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={160} />
+              <Tooltip
+                formatter={(v: number) => [formatCurrency(v), 'TCV']}
+                contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+              />
+              <Bar dataKey="tcv" name="TCV (RM)" radius={[0, 8, 8, 0]}>
+                {byPillar.map((_: any, i: number) => <Cell key={i} fill={PILLAR_COLORS_CHART[i % PILLAR_COLORS_CHART.length]} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-28 flex items-center justify-center text-sm text-slate-400">No pillar data available for this selection</div>
+        )}
+      </div>
+
+      {/* ── Project TCV Detail Table ── */}
       <div className="card overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-800 dark:text-white">Project Budget Details</h3>
+          <div>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Project TCV Details</h3>
+            {(selectedYear || selectedPillar) && (
+              <p className="text-xs text-indigo-500 mt-0.5">Filtered: {[selectedYear && `Year ${selectedYear}`, selectedPillar].filter(Boolean).join(' · ')}</p>
+            )}
+          </div>
           <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-full">All values in Ringgit Malaysia (RM)</span>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
-              <th className="px-6 py-3 text-left font-medium">Project</th>
-              <th className="px-6 py-3 text-left font-medium">Status</th>
-              <th className="px-6 py-3 text-right font-medium">Budget (RM)</th>
-              <th className="px-6 py-3 text-right font-medium">Spent (RM)</th>
-              <th className="px-6 py-3 text-right font-medium">Remaining (RM)</th>
-              <th className="px-6 py-3 text-right font-medium">Usage</th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map((p: any) => (
-              <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                <td className="px-6 py-3 font-medium text-slate-800 dark:text-white">{p.title}</td>
-                <td className="px-6 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 uppercase tracking-wide">{p.status}</span>
-                </td>
-                <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300 font-mono text-xs">{formatCurrency(p.budget_total)}</td>
-                <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300 font-mono text-xs">{formatCurrency(p.budget_spent)}</td>
-                <td className={`px-6 py-3 text-right font-mono text-xs font-semibold ${p.is_over_budget ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {formatCurrency(p.budget_remaining)}
-                </td>
-                <td className="px-6 py-3">
-                  <div className="flex items-center justify-end gap-2">
-                    <div className="w-20 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                      <div className={`h-2 rounded-full ${p.is_over_budget ? 'bg-red-500' : p.budget_usage_pct >= 80 ? 'bg-yellow-500' : 'bg-indigo-500'}`} style={{ width: `${Math.min(100, p.budget_usage_pct)}%` }} />
-                    </div>
-                    <span className={`text-xs font-medium ${p.is_over_budget ? 'text-red-500' : 'text-slate-500'}`}>{p.budget_usage_pct}%</span>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wide">
+                <th className="px-5 py-3 text-left font-semibold">Project</th>
+                <th className="px-5 py-3 text-left font-semibold">Pillar</th>
+                <th className="px-5 py-3 text-left font-semibold">Status</th>
+                <th className="px-5 py-3 text-right font-semibold">Progress</th>
+                <th className="px-5 py-3 text-right font-semibold">TCV (RM)</th>
+                <th className="px-5 py-3 text-right font-semibold">Year</th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-indigo-50 dark:bg-indigo-900/20 border-t-2 border-indigo-200 dark:border-indigo-700">
-              <td className="px-6 py-3 font-bold text-slate-800 dark:text-white" colSpan={2}>Total</td>
-              <td className="px-6 py-3 text-right font-bold text-slate-800 dark:text-white font-mono text-xs">{formatCurrency(totals.total_budget || 0)}</td>
-              <td className="px-6 py-3 text-right font-bold text-slate-800 dark:text-white font-mono text-xs">{formatCurrency(totals.total_spent || 0)}</td>
-              <td className="px-6 py-3 text-right font-bold text-emerald-700 dark:text-emerald-400 font-mono text-xs">{formatCurrency(totals.total_remaining || 0)}</td>
-              <td className="px-6 py-3 text-right text-xs font-semibold text-slate-500">
-                {totals.total_budget > 0 ? `${((totals.total_spent / totals.total_budget) * 100).toFixed(1)}%` : '—'}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+            </thead>
+            <tbody>
+              {filteredProjects.map((p: any) => (
+                <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700/50 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors">
+                  <td className="px-5 py-3 font-medium text-slate-800 dark:text-white max-w-xs truncate">{p.title}</td>
+                  <td className="px-5 py-3">
+                    <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md">{p.pillar || '—'}</span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 uppercase tracking-wider">{p.status}</span>
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+                        <div className="h-1.5 rounded-full bg-indigo-500" style={{ width: `${p.progress_percent ?? 0}%` }} />
+                      </div>
+                      <span className="text-xs text-slate-500 w-8 text-right">{p.progress_percent ?? 0}%</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-right font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                    {p.tcv != null ? formatCurrency(p.tcv) : <span className="text-slate-300 font-normal">—</span>}
+                  </td>
+                  <td className="px-5 py-3 text-right text-slate-400 text-xs">{p.start_date ? new Date(p.start_date).getFullYear() : '—'}</td>
+                </tr>
+              ))}
+              {filteredProjects.length === 0 && (
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-slate-400 text-sm">No projects match the current filters</td></tr>
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="bg-indigo-50 dark:bg-indigo-900/20 border-t-2 border-indigo-200 dark:border-indigo-700">
+                <td className="px-5 py-3 font-bold text-slate-800 dark:text-white text-sm" colSpan={4}>
+                  Total {selectedPillar ? `(${selectedPillar})` : ''}
+                </td>
+                <td className="px-5 py-3 text-right font-bold text-indigo-700 dark:text-indigo-300 font-mono">
+                  {formatCurrency(filteredTcv || totals.total_tcv || 0)}
+                </td>
+                <td className="px-5 py-3" />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </div>
   );

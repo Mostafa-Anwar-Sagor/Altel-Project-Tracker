@@ -55,6 +55,23 @@ class MilestoneSerializer(serializers.ModelSerializer):
         return obj.tasks.count()
 
 
+def _user_can_see_tcv(request_user, project):
+    """Return True if the requesting user is allowed to see the TCV value."""
+    if not request_user or not request_user.is_authenticated:
+        return False
+    access_level = getattr(request_user, 'access_level', 'OWN_ONLY')
+    if request_user.is_superuser or access_level in ('ADMIN', 'FULL_ACCESS'):
+        return True
+    if access_level == 'PILLAR_BASED':
+        return request_user.pillar and request_user.pillar == project.pillar
+    # OWN_ONLY: owner or created_by or assigned manager
+    return (
+        project.owner_id == request_user.id
+        or project.created_by_id == request_user.id
+        or project.manager_id == request_user.id
+    )
+
+
 class ProjectListSerializer(serializers.ModelSerializer):
     owner = UserMinimalSerializer(read_only=True)
     manager = UserMinimalSerializer(read_only=True)
@@ -67,15 +84,17 @@ class ProjectListSerializer(serializers.ModelSerializer):
     tasks_count = serializers.SerializerMethodField()
     tasks_done = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
+    tcv_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'slug', 'description', 'status', 'priority',
-            'pillar', 'client_name', 'contact_person', 'contact_tel',
+            'pillar', 'client_name', 'project_manager',
+            'tcv', 'tcv_display',
             'custom_fields',
             'category', 'owner', 'manager', 'start_date', 'end_date',
-            'progress_percent', 'budget_total', 'budget_spent', 'estimated_hours',
+            'progress_percent', 'estimated_hours',
             'logged_hours', 'is_public', 'color_label', 'tags', 'days_until_deadline',
             'is_overdue', 'health_score', 'tasks_count', 'tasks_done', 'member_count',
             'created_at', 'updated_at'
@@ -89,6 +108,19 @@ class ProjectListSerializer(serializers.ModelSerializer):
 
     def get_member_count(self, obj):
         return obj.members.count()
+
+    def get_tcv_display(self, obj):
+        request = self.context.get('request')
+        if request and _user_can_see_tcv(request.user, obj):
+            return float(obj.tcv) if obj.tcv is not None else None
+        return None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if not (request and _user_can_see_tcv(request.user, instance)):
+            data['tcv'] = None
+        return data
 
 
 class ProjectDetailSerializer(serializers.ModelSerializer):
@@ -105,16 +137,18 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     tasks_count = serializers.SerializerMethodField()
     tasks_done = serializers.SerializerMethodField()
     created_by = UserMinimalSerializer(read_only=True)
+    tcv_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'slug', 'description', 'status', 'priority',
-            'pillar', 'client_name', 'contact_person', 'contact_tel',
+            'pillar', 'client_name', 'project_manager',
+            'tcv', 'tcv_display',
             'custom_fields',
             'category', 'owner', 'manager', 'members', 'milestones',
             'start_date', 'end_date', 'actual_completion_date',
-            'estimated_hours', 'logged_hours', 'budget_total', 'budget_spent',
+            'estimated_hours', 'logged_hours',
             'progress_percent', 'is_public', 'color_label', 'cover_image',
             'tags', 'days_until_deadline', 'is_overdue', 'health_score',
             'tasks_count', 'tasks_done', 'created_by', 'created_at', 'updated_at'
@@ -125,6 +159,19 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
 
     def get_tasks_done(self, obj):
         return obj.tasks.filter(status='DONE').count()
+
+    def get_tcv_display(self, obj):
+        request = self.context.get('request')
+        if request and _user_can_see_tcv(request.user, obj):
+            return float(obj.tcv) if obj.tcv is not None else None
+        return None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if not (request and _user_can_see_tcv(request.user, instance)):
+            data['tcv'] = None
+        return data
 
 
 class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
@@ -138,10 +185,11 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             'title', 'description', 'status', 'priority',
-            'pillar', 'client_name', 'contact_person', 'contact_tel',
+            'pillar', 'client_name', 'project_manager',
+            'tcv',
             'custom_fields',
             'category_id', 'manager_id', 'start_date', 'end_date',
-            'estimated_hours', 'budget_total', 'budget_spent',
+            'estimated_hours',
             'progress_percent', 'is_public', 'color_label', 'cover_image', 'tag_ids'
         ]
 

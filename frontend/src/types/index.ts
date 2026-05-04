@@ -89,8 +89,7 @@ export interface Project {
   priority: ProjectPriority;
   pillar: string;
   client_name: string;
-  contact_person: string;
-  contact_tel: string;
+  project_manager: string;
   custom_fields: Record<string, string>;
   category: ProjectCategory | null;
   owner: UserMinimal;
@@ -100,8 +99,8 @@ export interface Project {
   actual_completion_date: string | null;
   estimated_hours: number;
   logged_hours: number;
-  budget_total: number;
-  budget_spent: number;
+  tcv: number | null;
+  tcv_display: number | null;
   progress_percent: number;
   is_public: boolean;
   color_label: string;
@@ -264,11 +263,13 @@ export interface DashboardData {
     overdue_tasks_count: number;
   };
   my_tasks_today: { id: string; title: string; priority: string; project: string }[];
-  budget: { total: number; spent: number };
+  budget: { total: number; spent: number; projects_with_tcv: number; total_projects: number };
   charts: {
     status_distribution: { name: string; value: number; key: string }[];
     priority_distribution: { name: string; value: number; key: string }[];
     monthly_completed: { month: string; completed: number }[];
+    tcv_by_year: { year: string; tcv: number }[];
+    tcv_by_pillar: { pillar: string; tcv: number }[];
   };
   top_projects: Project[];
   recent_activity: ActivityLog[];

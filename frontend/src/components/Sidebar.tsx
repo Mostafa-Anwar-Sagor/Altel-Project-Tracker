@@ -12,7 +12,7 @@ const navItems = [
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/tasks', icon: ListTodo, label: 'My Tasks' },
   { to: '/calendar', icon: Calendar, label: 'Calendar' },
-  { to: '/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/reports', icon: BarChart3, label: 'Report & Analytics' },
   { to: '/notifications', icon: Bell, label: 'Notifications' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];

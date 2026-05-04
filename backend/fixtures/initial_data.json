@@ -462,8 +462,8 @@
       "description": "Service Provide for Cloud Computing Infrastructure and Associated Service for Tradewinds Plantation Berhad.",
       "pillar": "Cloud",
       "client_name": "Tradewinds Plantation Berhad",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -478,8 +478,8 @@
       "end_date": "2028-02-12",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#06B6D4",
@@ -502,8 +502,8 @@
       "description": "Implementation of PNMB Security Operations Center (SOC) Services for Percetakan Nasional Malaysia Berhad (PNMB).",
       "pillar": "Cybersecurity",
       "client_name": "Percetakan Nasional Malaysia Berhad (PNMB)",
-      "contact_person": "Athira Fathin Binti Mohd Azani",
-      "contact_tel": "012-5191236",
+      "project_manager": "Athira Fathin Binti Mohd Azani",
+      
       "custom_fields": {},
       "status": "EXPIRED",
       "priority": "MEDIUM",
@@ -518,8 +518,8 @@
       "end_date": "2026-02-28",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -542,8 +542,8 @@
       "description": "Managed Security Service Program (MSSP) Cybersecurity for Tradewinds Plantation Berhad.",
       "pillar": "Cybersecurity",
       "client_name": "Tradewinds Plantation Berhad",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -558,8 +558,8 @@
       "end_date": "2026-10-30",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -582,8 +582,8 @@
       "description": "Wifi Network installation and management at Ampang Office for Tradewinds Corporation Berhad (TCB).",
       "pillar": "Managed Network Services",
       "client_name": "Tradewinds Corporation Berhad (TCB)",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -598,8 +598,8 @@
       "end_date": "2026-12-11",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -622,8 +622,8 @@
       "description": "Sangfor Endpoint Protection Platform (EPP) – 85 Units for Liansin Trading Sdn. Bhd.",
       "pillar": "Managed Network Services",
       "client_name": "Liansin Trading Sdn. Bhd.",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -638,8 +638,8 @@
       "end_date": "2027-01-08",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -662,8 +662,8 @@
       "description": "Wifi Access Point supply and installation including hardware for Liansin Trading Sdn. Bhd.",
       "pillar": "Managed Network Services",
       "client_name": "Liansin Trading Sdn. Bhd.",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -678,8 +678,8 @@
       "end_date": "2027-01-08",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -702,8 +702,8 @@
       "description": "Sangfor Endpoint Protection Platform (EPP) deployment for Jasmine Food Corporation Sdn Bhd.",
       "pillar": "Cybersecurity",
       "client_name": "Jasmine Food Corporation Sdn Bhd",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -718,8 +718,8 @@
       "end_date": "2026-12-24",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -742,8 +742,8 @@
       "description": "Firewall Renewal 2025 for Central Sugars Refinery Sdn Bhd at Batu Tiga, Shah Alam.",
       "pillar": "Cybersecurity",
       "client_name": "Central Sugars Refinery Sdn Bhd (Batu Tiga, Shah Alam)",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -758,8 +758,8 @@
       "end_date": "2026-06-05",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -782,8 +782,8 @@
       "description": "Managed Network Services for Central Sugars Refinery Sdn Bhd at Padang Terap.",
       "pillar": "Managed Network Services",
       "client_name": "Central Sugars Refinery Sdn Bhd (Padang Terap)",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -798,8 +798,8 @@
       "end_date": "2026-05-30",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -822,8 +822,8 @@
       "description": "Cybersecurity Service Provider engagement for Tradewinds Group (M) Sdn. Bhd.",
       "pillar": "Cybersecurity",
       "client_name": "Tradewinds Group (M) Sdn. Bhd.",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -838,8 +838,8 @@
       "end_date": "2026-12-30",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -862,8 +862,8 @@
       "description": "Falcon Endpoint Protection Enterprise Bundle (Yearly) – 95 Units for Tradewinds Corporation Berhad (TCB).",
       "pillar": "Cybersecurity",
       "client_name": "Tradewinds Corporation Berhad (TCB)",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "EXPIRED",
       "priority": "MEDIUM",
@@ -878,8 +878,8 @@
       "end_date": "2026-02-27",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -902,8 +902,8 @@
       "description": "Falcon Endpoint Protection Enterprise Bundle for Horsedale Development Berhad (Glenmarie Hotel).",
       "pillar": "Cybersecurity",
       "client_name": "Horsedale Development Berhad (Glenmarie Hotel)",
-      "contact_person": "Athira Fathin Binti Mohd Azani",
-      "contact_tel": "012-5191236",
+      "project_manager": "Athira Fathin Binti Mohd Azani",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -918,8 +918,8 @@
       "end_date": "2026-11-24",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -942,8 +942,8 @@
       "description": "Falcon Endpoint Protection Enterprise Flexible Bundle (Yearly) – 40 units for Horsedale Development Berhad (Glenmarie Golf).",
       "pillar": "Cybersecurity",
       "client_name": "Horsedale Development Berhad (Glenmarie Golf)",
-      "contact_person": "Athira Fathin Binti Mohd Azani",
-      "contact_tel": "012-5191236",
+      "project_manager": "Athira Fathin Binti Mohd Azani",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -958,8 +958,8 @@
       "end_date": "2026-12-04",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -982,8 +982,8 @@
       "description": "Upgrading Direct Internet Access (DIA) for Horsedale Development Berhad (Glenmarie Hotel and Golf Resort Sdn. Bhd.).",
       "pillar": "Managed Network Services",
       "client_name": "Horsedale Development Berhad (Glenmarie Hotel and Golf Resort Sdn. Bhd.)",
-      "contact_person": "Athira Fathin Binti Mohd Azani",
-      "contact_tel": "012-5191236",
+      "project_manager": "Athira Fathin Binti Mohd Azani",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -998,8 +998,8 @@
       "end_date": "2026-07-31",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -1022,8 +1022,8 @@
       "description": "Falcon Endpoint Protection Enterprise Bundle (Yearly) – 90 units for Benua Perdana Sdn Bhd (The Danna Langkawi).",
       "pillar": "Cybersecurity",
       "client_name": "Benua Perdana Sdn Bhd (The Danna Langkawi)",
-      "contact_person": "Syazmimi Binti Zakaria",
-      "contact_tel": "017-5890649",
+      "project_manager": "Syazmimi Binti Zakaria",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1038,8 +1038,8 @@
       "end_date": "2026-11-24",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -1062,8 +1062,8 @@
       "description": "MIS Falcon Crowdstrike 12 months Subscription – 100 Units renewal for THR Hotel (Langkawi) Sdn Bhd (Pelangi Beach Resort & Spa Langkawi).",
       "pillar": "Cybersecurity",
       "client_name": "THR Hotel (Langkawi) Sdn Bhd — Pelangi Beach Resort & Spa Langkawi",
-      "contact_person": "Syazmimi Binti Zakaria",
-      "contact_tel": "017-5890649",
+      "project_manager": "Syazmimi Binti Zakaria",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1078,8 +1078,8 @@
       "end_date": "2026-11-24",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -1102,8 +1102,8 @@
       "description": "Falcon Endpoint Protection Enterprise Bundle (Yearly) – 65 units renewal for Rebak Island Marina Berhad.",
       "pillar": "Cybersecurity",
       "client_name": "Rebak Island Marina Berhad",
-      "contact_person": "Syazmimi Binti Zakaria",
-      "contact_tel": "017-5890649",
+      "project_manager": "Syazmimi Binti Zakaria",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1118,8 +1118,8 @@
       "end_date": "2026-11-23",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -1142,8 +1142,8 @@
       "description": "Security Surveillance and Assessment Consultancy Services for Padiberas Nasional Berhad (\"Bernas\") Premises covering Headquarters Glenmarie Shah Alam and Warehouses in Malaysia.",
       "pillar": "IoT",
       "client_name": "Padiberas Nasional Berhad",
-      "contact_person": "Izahar Hamidon",
-      "contact_tel": "019-9971077",
+      "project_manager": "Izahar Hamidon",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1158,8 +1158,8 @@
       "end_date": "2026-12-31",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#10B981",
@@ -1182,8 +1182,8 @@
       "description": "Purchase of Firewall for HQ & Opun for Tradewinds Plantation Berhad.",
       "pillar": "Cybersecurity",
       "client_name": "Tradewinds Plantation Berhad",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1198,8 +1198,8 @@
       "end_date": "2028-10-12",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -1222,8 +1222,8 @@
       "description": "Upgrade Database For Buggy Station at Glenmarie Golf & Country Club.",
       "pillar": "IoT",
       "client_name": "Glenmarie Golf & Country Club",
-      "contact_person": "Athira Fathin Binti Mohd Azani",
-      "contact_tel": "012-5191236",
+      "project_manager": "Athira Fathin Binti Mohd Azani",
+      
       "custom_fields": {},
       "status": "EXPIRED",
       "priority": "MEDIUM",
@@ -1238,8 +1238,8 @@
       "end_date": "2026-03-16",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#10B981",
@@ -1262,8 +1262,8 @@
       "description": "Managed Security Services And Next Generation Endpoint Protection for Padiberas Nasional Berhad.",
       "pillar": "Cybersecurity",
       "client_name": "Padiberas Nasional Berhad",
-      "contact_person": "Izahar Hamidon",
-      "contact_tel": "019-9971077",
+      "project_manager": "Izahar Hamidon",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1278,8 +1278,8 @@
       "end_date": "2026-07-11",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#EF4444",
@@ -1302,8 +1302,8 @@
       "description": "Implementation of Direct Internet Access (DIA) services for Central Sugars Refinery Sdn Bhd at Batu Tiga, Shah Alam.",
       "pillar": "Managed Network Services",
       "client_name": "Central Sugars Refinery Sdn Bhd (Batu Tiga, Shah Alam)",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1318,8 +1318,8 @@
       "end_date": "2027-05-03",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -1342,8 +1342,8 @@
       "description": "LTE and VSAT Connectivity M2M services for Tradewinds Plantation Berhad.",
       "pillar": "PLTE",
       "client_name": "Tradewinds Plantation Berhad",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1358,8 +1358,8 @@
       "end_date": "2028-03-27",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#8B5CF6",
@@ -1382,8 +1382,8 @@
       "description": "CCTV Surveillance Pilot deployment for Beras Corporation Sdn Bhd at Kudat & Kidurong.",
       "pillar": "IoT",
       "client_name": "Beras Corporation Sdn Bhd (Kudat & Kidurong)",
-      "contact_person": "Izahar Hamidon",
-      "contact_tel": "019-9971077",
+      "project_manager": "Izahar Hamidon",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1398,8 +1398,8 @@
       "end_date": "2028-08-31",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#10B981",
@@ -1422,8 +1422,8 @@
       "description": "CCTV Surveillance Pilot deployment for Padiberas Nasional Berhad premises at Prai & Palaman.",
       "pillar": "IoT",
       "client_name": "Padiberas Nasional Berhad (Prai & Palaman)",
-      "contact_person": "Izahar Hamidon",
-      "contact_tel": "019-9971077",
+      "project_manager": "Izahar Hamidon",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1438,8 +1438,8 @@
       "end_date": "2028-08-31",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#10B981",
@@ -1462,8 +1462,8 @@
       "description": "High Mast Smart Lighting IoT solution for Johor Port Berhad.",
       "pillar": "IoT",
       "client_name": "Johor Port Berhad",
-      "contact_person": "Reza Affendi Bin Mohamad Khir",
-      "contact_tel": "019-2098117",
+      "project_manager": "Reza Affendi Bin Mohamad Khir",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1478,8 +1478,8 @@
       "end_date": "2026-10-13",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#10B981",
@@ -1502,8 +1502,8 @@
       "description": "Private Wireless network services for Kontena Nasional Berhad at KNB Port Klang.",
       "pillar": "Managed Network Services",
       "client_name": "Kontena Nasional Berhad",
-      "contact_person": "Reza Affendi Bin Mohamad Khir",
-      "contact_tel": "019-2098117",
+      "project_manager": "Reza Affendi Bin Mohamad Khir",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1518,8 +1518,8 @@
       "end_date": "2028-02-04",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -1542,8 +1542,8 @@
       "description": "To Provide Bernas Data Center Co-Location Services and Hardware Lease to Use with Managed Services for Padiberas Nasional Berhad.",
       "pillar": "Cloud",
       "client_name": "Padiberas Nasional Berhad",
-      "contact_person": "Izahar Hamidon",
-      "contact_tel": "019-9971077",
+      "project_manager": "Izahar Hamidon",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1558,8 +1558,8 @@
       "end_date": "2028-04-19",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#06B6D4",
@@ -1582,8 +1582,8 @@
       "description": "M2M 4G LTE Services For Operational Area for Penang Port Sdn Bhd.",
       "pillar": "Managed Network Services",
       "client_name": "Penang Port Sdn Bhd",
-      "contact_person": "Syazmimi Binti Zakaria",
-      "contact_tel": "017-5890649",
+      "project_manager": "Syazmimi Binti Zakaria",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1598,8 +1598,8 @@
       "end_date": "2027-09-05",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -1622,8 +1622,8 @@
       "description": "Implement Network Technology Refresh Of Switches And Access Point Devices Including Managed Services for Padiberas Nasional Berhad Headquarters.",
       "pillar": "Managed Network Services",
       "client_name": "Padiberas Nasional Berhad Headquarters",
-      "contact_person": "Izahar Hamidon",
-      "contact_tel": "019-9971077",
+      "project_manager": "Izahar Hamidon",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1638,8 +1638,8 @@
       "end_date": "2027-06-06",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -1662,8 +1662,8 @@
       "description": "Replace Bandwidth Management Including Support and Maintenance for Padiberas Nasional Berhad Headquarters.",
       "pillar": "Managed Network Services",
       "client_name": "Padiberas Nasional Berhad Headquarters",
-      "contact_person": "Izahar Hamidon",
-      "contact_tel": "019-9971077",
+      "project_manager": "Izahar Hamidon",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1678,8 +1678,8 @@
       "end_date": "2027-01-07",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
@@ -1702,8 +1702,8 @@
       "description": "M2M SIM Connectivity services for Aco Tech Sdn Bhd.",
       "pillar": "Managed Network Services",
       "client_name": "Aco Tech Sdn Bhd",
-      "contact_person": "Kasyfil Aziz Bin Yusoff",
-      "contact_tel": "013-3941412",
+      "project_manager": "Kasyfil Aziz Bin Yusoff",
+      
       "custom_fields": {},
       "status": "ONGOING",
       "priority": "MEDIUM",
@@ -1718,8 +1718,8 @@
       "end_date": "2029-08-31",
       "actual_completion_date": null,
       "estimated_hours": "0.00",
-      "budget_total": "0.00",
-      "budget_spent": "0.00",
+      
+      
       "progress_percent": 0,
       "is_public": false,
       "color_label": "#3B82F6",
