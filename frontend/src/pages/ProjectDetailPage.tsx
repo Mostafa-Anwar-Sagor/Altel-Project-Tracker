@@ -30,7 +30,6 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const canSeeTCV =
-    user?.is_superuser ||
     user?.access_level === 'ADMIN' ||
     user?.access_level === 'FULL_ACCESS' ||
     user?.access_level === 'PILLAR_BASED';

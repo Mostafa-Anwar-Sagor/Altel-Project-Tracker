@@ -476,12 +476,12 @@ export default function ProjectCreatePage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{String(ep.title) || '(No title)'}</p>
                         <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          {ep.pillar && <span>Pillar: {String(ep.pillar)}</span>}
-                          {ep.client_name && <span>Client: {String(ep.client_name)}</span>}
-                          {ep.project_manager && <span>PM: {String(ep.project_manager)}</span>}
+                          {!!ep.pillar && <span>Pillar: {String(ep.pillar)}</span>}
+                          {!!ep.client_name && <span>Client: {String(ep.client_name)}</span>}
+                          {!!ep.project_manager && <span>PM: {String(ep.project_manager)}</span>}
                           {ep.tcv != null && ep.tcv !== '' && <span className="text-emerald-600 dark:text-emerald-400 font-medium">TCV: RM {Number(ep.tcv).toLocaleString()}</span>}
-                          {ep.start_date && <span>Start: {String(ep.start_date)}</span>}
-                          {ep.end_date && <span>End: {String(ep.end_date)}</span>}
+                          {!!ep.start_date && <span>Start: {String(ep.start_date)}</span>}
+                          {!!ep.end_date && <span>End: {String(ep.end_date)}</span>}
                           <span className="capitalize">{String(ep.status || 'draft').toLowerCase().replace(/_/g, ' ')}</span>
                           {customFieldKeys.length > 0 && (
                             <span className="text-violet-500 dark:text-violet-400">+{customFieldKeys.length} custom field{customFieldKeys.length !== 1 ? 's' : ''}</span>

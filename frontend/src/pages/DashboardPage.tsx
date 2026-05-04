@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const canSeeTCV = user?.is_superuser || user?.access_level === 'ADMIN' || user?.access_level === 'FULL_ACCESS' || user?.access_level === 'PILLAR_BASED';
+  const canSeeTCV = user?.access_level === 'ADMIN' || user?.access_level === 'FULL_ACCESS' || user?.access_level === 'PILLAR_BASED';
 
   const fetchDashboard = () => {
     dashboardAPI.get()
