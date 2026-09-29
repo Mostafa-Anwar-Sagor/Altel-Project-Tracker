@@ -1,34 +1,64 @@
 # ProTracker 🚀
 
-ProTracker is a comprehensive, full-stack project tracking and management application designed to streamline team collaboration, task assignment, and project oversight. The platform features a responsive, modern frontend and a robust backend, ready for deployment on Microsoft Azure.
+ProTracker is a comprehensive, enterprise-grade full-stack project tracking and management application designed to streamline team collaboration, task assignment, and project oversight. The platform features a responsive, modern frontend and a robust backend, and is ready for deployment on Microsoft Azure.
 
-## 🌟 Features
+---
 
-- **Interactive Dashboard:** Visual analytics and charts (powered by Recharts) to track project progress and team performance.
-- **Task Management:** Kanban-style drag-and-drop task organization (using dnd-kit) and calendar views.
-- **Project Workspaces:** Dedicated areas for projects, complete with comments, file attachments, and status tracking.
-- **Real-time Notifications:** WebSockets integration (Django Channels) and Twilio SMS for instant updates.
-- **Background Processing:** Celery integration for handling scheduled and asynchronous tasks like reporting and email notifications.
-- **Azure Ready:** Pre-configured deployment scripts (`azure-deploy.ps1`) and configuration files for Azure App Service and Azure Static Web Apps.
+## 🌟 Key Features
+
+### 🏢 Project & Portfolio Management
+- **Project Workspaces:** Dedicated areas for projects complete with timelines, custom fields, budgets (TCV), and assigned clients.
+- **Health Scoring:** Automated project health scores calculated dynamically based on schedule adherence, task completion rate, overdue tasks, and recent activity.
+- **Milestones:** Track major project phases with due dates and completion tracking.
+- **Project Templates:** Create predefined templates with default milestones and tasks to rapidly spin up new projects.
+- **Categorization & Tagging:** Group projects by Pillars, Categories, and custom color-coded Tags.
+- **Historical Snapshots:** Automated daily/weekly snapshots of project progress, tasks, budget, and logged hours for historical reporting.
+
+### ✅ Advanced Task Management
+- **Kanban & Calendar Views:** Organize tasks with drag-and-drop boards (powered by dnd-kit) and interactive calendars (React Big Calendar).
+- **Task Hierarchy:** Support for parent tasks and subtasks for granular work breakdown.
+- **Time Tracking:** Built-in time logging (hours spent vs. estimated hours) at the task level.
+- **Recurring Tasks:** Schedule recurring tasks with customizable recurrence rules.
+- **Prioritization & Status:** Track tasks through custom statuses (To Do, In Progress, Review, Blocked, Done) and priorities (Low to Critical).
+
+### 👥 User Roles & Access Control
+- **Role-Based Access Control (RBAC):** Strict access levels including Admin, Full Access, Pillar-Based (only see projects in a specific business pillar), and Own-Only.
+- **Project-Level Roles:** Granular permissions within projects (Manager, Developer, Designer, Tester, Viewer).
+- **User Profiles:** Rich user profiles detailing skills, department, timezone, bio, and working capacity (hours per day).
+
+### 💬 Collaboration & Communication
+- **Comments & Mentions:** Threaded discussions on tasks and projects.
+- **File Management:** Upload and attach files/documents directly to specific tasks or projects.
+- **Real-Time Notifications:** Instant in-app alerts powered by Django Channels (WebSockets).
+- **SMS Integration:** Twilio integration for critical, time-sensitive alerts delivered straight to mobile phones.
+- **Custom Calendar Events:** Schedule meetings, deadlines, and reminders directly within the app calendar.
+
+### 📊 Analytics & Customizable Dashboards
+- **Interactive Dashboard:** Visual analytics, progress charts, and burndown charts powered by Recharts.
+- **Customizable Widgets:** Users can add, resize, and reposition their own dashboard widgets.
+
+---
 
 ## 🛠️ Technology Stack
 
 ### Frontend
-- **Framework:** React 18 with Vite
-- **Styling:** Tailwind CSS, PostCSS
+- **Framework:** React 18, Vite
+- **Styling:** Tailwind CSS, PostCSS, clsx, tailwind-merge
 - **State Management:** Zustand
 - **Routing:** React Router v6
-- **Data Visualization:** Recharts, React Big Calendar
-- **Interactions:** @dnd-kit (Drag and Drop)
-- **Forms:** React Hook Form
+- **Data Visualization & UI:** Recharts (Charts), React Big Calendar (Calendar), @dnd-kit (Drag and Drop), Lucide React (Icons)
+- **Forms & Validation:** React Hook Form
+- **API Client:** Axios
 
 ### Backend
-- **Framework:** Django 5 & Django REST Framework
-- **Asynchronous/WebSockets:** Django Channels, Daphne
-- **Task Queue:** Celery, Django Celery Beat
+- **Core Framework:** Django 5.2 & Django REST Framework (DRF)
+- **Asynchronous/WebSockets:** Django Channels, Daphne, Redis (optional)
+- **Task Queue & Cron Jobs:** Celery, Django Celery Beat
 - **Database:** SQLite (Configured for persistent storage on Azure App Service)
-- **Authentication:** Simple JWT
-- **External Integrations:** Twilio (SMS capabilities)
+- **Authentication:** Simple JWT (JSON Web Tokens)
+- **External Integrations:** Twilio (SMS), Whitenoise (Static file serving)
+
+---
 
 ## 🚀 Getting Started (Local Development)
 
@@ -51,10 +81,15 @@ source venv/bin/activate
 
 pip install -r requirements.txt
 ```
-Run migrations and start the server:
+Run migrations and start the development server:
 ```bash
 python manage.py migrate
 python manage.py runserver
+```
+
+*(Optional) To test WebSockets and Background tasks locally, you will need to start the Celery worker process in a separate terminal:*
+```bash
+celery -A config worker -l info
 ```
 
 ### 2. Frontend Setup
@@ -69,12 +104,25 @@ npm run dev
 ```
 The frontend should now be running at `http://localhost:5173`.
 
+---
+
 ## ☁️ Azure Deployment
 
-The project is already configured for deployment on Microsoft Azure. 
-- The backend can be deployed to an **Azure App Service** (Linux/Python environment). See `.env.azure.example` for required environment variables.
-- The frontend can be deployed to an **Azure Static Web App**.
-- You can use the provided PowerShell script `azure-deploy.ps1` to automate the deployment process.
+This project contains deployment scripts and configurations specifically tailored for **Microsoft Azure**.
+
+1. **Backend (Azure App Service):**
+   - Deployed as a Python App Service.
+   - Requires setting up environment variables in the Azure Portal (see `backend/.env.azure.example` for reference keys like `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`).
+   - `startup.sh` handles database migrations and Gunicorn/Uvicorn server execution automatically upon container startup.
+
+2. **Frontend (Azure Static Web Apps):**
+   - Contains a `staticwebapp.config.json` for routing rules (fallback to `index.html` for React Router).
+   - Deployed using Azure GitHub Actions or Azure CLI.
+
+3. **Automation:**
+   - Run the provided `azure-deploy.ps1` script to automate resource group creation, app service plan setup, and deployment processes.
+
+---
 
 ## 🤝 Contributing
 
